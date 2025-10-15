@@ -1,0 +1,26 @@
+name: Dependency & Security Audit
+
+on:
+  pull_request:
+  schedule:
+    - cron: '0 5 * * *'
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install --upgrade pip
+      - name: Install deps (if requirements.txt exists)
+        if: hashFiles('requirements.txt') != ''
+        run: pip install -r requirements.txt
+      - run: pip install pip-audit safety bandit
+      - name: pip-audit (fail on vuln)
+        run: pip-audit --strict
+      - name: Safety (report only)
+        run: safety check || true
+      - name: Bandit (report, non-blocking)
+        run: bandit -r . || true
