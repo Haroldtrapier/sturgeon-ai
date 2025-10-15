@@ -1,0 +1,20 @@
+name: Gitleaks - Secret Scan
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+jobs:
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: gitleaks
+        uses: zricethezav/gitleaks-action@v2.3.7
+        env:
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+        with:
+          args: detect --no-git --redact --verbose
