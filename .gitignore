@@ -1,29 +1,39 @@
-__pcache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
-venv/
-*.egg-info/
-detcbuild
+# Dependencies
+node_modules/
+backend/__pycache__/
+backend/.venv/
+backend/venv/
+
+# Next.js
+.next/
+out/
+build/
+dist/
+
+# Environment variables
+.env
+.env.local
+.env.production
+backend/.env
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-+~
-
-# Environment
-.env
-.env.local
 
 # Testing
+coverage/
 .pytest_cache/
-.coverage
-htmlcov/
 
-# OS
-.DS_Store
-Thumbs.db
+# Misc
+*.pem
+.vercel
