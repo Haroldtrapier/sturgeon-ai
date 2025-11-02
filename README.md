@@ -1,148 +1,218 @@
-# 🐟 Sturgeon AI - Government Contracting Platform
+# 🚀 Sturgeon AI - Government Contracting Platform v2.0
 
-AI-powered government contracting and grant management platform with integrated SAM.gov and Grants.gov search capabilities.
+**Production-Ready** | **Secure Authentication** | **Stripe Payments** | **Enterprise Features**
 
-## 🚀 Features
-
-### ✅ Live API Endpoints
-- **SAM.gov Integration** - Search federal contracts
-- **Grants.gov Integration** - Find grant opportunities
-- **AI Contract Analysis** - Intelligent requirement analysis
-- **AI Proposal Generation** - Automated proposal writing
-- **Opportunity Matching** - Smart contract-to-company matching
-- **Document Management** - Upload and manage documents
-- **Analytics Dashboard** - Performance metrics and insights
-
-### ✅ Frontend Pages
-- **Login Page** - Secure authentication
-- **Dashboard** - Overview with key metrics
-- **Opportunities** - Search and browse contracts/grants
-- **Proposals** - AI-powered proposal builder
-- **Analytics** - Performance tracking and charts
-
-## 🛠️ Tech Stack
-
-**Frontend:**
-- Next.js 14 (React 18)
-- TypeScript
-- Tailwind CSS
-- Recharts (Analytics)
-- Axios (API calls)
-
-**Backend:**
-- FastAPI (Python)
-- OpenAI GPT-4 (AI features)
-- SAM.gov API
-- Grants.gov API
-- Supabase (Database)
-
-## 📦 Installation
-
-### Frontend Setup
-```bash
-# Install dependencies
-npm install
-
-# Run development server
-npm run dev
-
-# Build for production
-npm run build
-```
-
-### Backend Setup
-```bash
-cd backend
-
-# Install Python dependencies
-pip install -r requirements.txt
-
-# Run API server
-uvicorn main:app --reload
-```
-
-## 🔧 Environment Variables
-
-Create `.env.local` in root:
-```
-NEXT_PUBLIC_API_URL=https://sturgeon-ai-prod.vercel.app
-```
-
-Create `backend/.env`:
-```
-OPENAI_API_KEY=your_openai_key
-SAM_GOV_API_KEY=your_sam_gov_key
-GRANTS_GOV_API_KEY=your_grants_gov_key
-```
-
-## 🚀 Deployment
-
-### Frontend (Vercel)
-```bash
-vercel --prod
-```
-
-### Backend (Vercel)
-```bash
-cd backend
-vercel --prod
-```
-
-### Environment Variables in Vercel
-Add these in your Vercel project settings:
-- `NEXT_PUBLIC_API_URL`
-- `OPENAI_API_KEY`
-- `SAM_GOV_API_KEY`
-- `GRANTS_GOV_API_KEY`
-
-## 📊 Database Schema
-
-15 production tables in Supabase:
-- users, organizations, team_members
-- opportunities, contracts, grants
-- proposals, submissions
-- compliance_checks, compliance_docs
-- notifications, audit_logs
-- ai_interactions, research_notes, sbir_projects
-
-## 🔗 API Documentation
-
-Visit `/docs` on your backend URL for interactive API documentation (FastAPI auto-generated).
-
-### Key Endpoints:
-- `GET /health` - Health check
-- `GET /api/opportunities/search` - Search contracts
-- `GET /api/grants/search` - Search grants
-- `POST /api/ai/analyze-contract` - Analyze requirements
-- `POST /api/ai/generate-proposal` - Generate proposal
-- `POST /api/ai/match-opportunities` - Match opportunities
-- `GET /api/analytics/dashboard` - Get analytics
-
-## 🎯 Usage
-
-1. **Login** - Access the platform at `/login`
-2. **Dashboard** - View your metrics and quick actions
-3. **Find Opportunities** - Search SAM.gov and Grants.gov
-4. **Create Proposals** - Use AI to generate winning proposals
-5. **Track Performance** - Monitor your analytics
-
-## 🤝 Contributing
-
-This is a production government contracting platform. For contributions or issues, please contact the development team.
-
-## 📄 License
-
-MIT License - see LICENSE file
-
-## 🔒 Security
-
-- FedRAMP compliant infrastructure
-- FISMA security controls
-- Data encryption at rest and in transit
-- Regular security audits
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Security: A+](https://img.shields.io/badge/Security-A+-brightgreen.svg)](SECURITY.md)
+[[Deploy: Vercel](https://img.shields.io/badge/Deploy-Vercel-black.svg)](https://vercel.com)
 
 ---
 
-**Built with ❤️ for government contractors**
+## 🎉️ What's New in v2.0?
 
-For questions or support, visit our documentation or contact support.
+### ✅ **Real Authentication**
+- JWT token-based auth
+- Bcrypt password hashing
+- Secure session management
+- Protected API endpoints
+
+### ✅ **Stripe Payment Integration**
+- Subscription management
+- Multiple pricing tiers
+- Secure checkout flow
+- Webhook support
+
+### ✅ **Production Database**
+- Supabase PostgreSQL
+- Row Level Security
+- Data persistence
+- Backup & recovery
+
+### ✅ **Security Hardening**
+- Rate limiting
+- CORS protection
+- Input validation
+- SQL injection prevention
+
+---
+
+## 🏗️ Architecture
+
+```
+┌────────────────┐      ┌─────────────────┐      ┌───────────────┐
+│   Frontend      │
+─────┴▚│   FastAPI        │────┴▚│   Supabase      │
+│   Next.js 14   |      │   Backend        │      │   PostgreSQL    │
+│   + Tailwind    │◀────┘│   + Auth         │      └────────────────┘│   + Stripe       │                         │
+└────────────────┘ │   + Payments     |      └────────────────┘                   │
+                      │                                            │
+                      └───────────────────────────────────┘
+                                  Secure TLS 1.3
+```
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Node.js 18+
+- Python 3.11+
+- Supabase account
+- Stripe account
+
+### 1. Clone Repository
+```bash
+git clone https://github.com/Haroldtrapier/sturgeon-ai.git
+cd sturgeon-ai
+```
+
+### 2. Setup Backend
+```bash
+cd backend
+pip install -r requirements.txt
+cp .env.example .env
+# Edit .env with your credentials
+uvicorn main:app --reload
+```
+
+### 3. Setup Frontend
+```bash
+npm install
+cp .env.example .env.local
+# Edit .env.local with your API URL
+npm run dev
+```
+
+### 4. Open Browser
+```
+Frontend: http://localhost:3000
+Backend: http://localhost:8000/docs
+```
+
+---
+
+## 📖 Documentation
+
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Complete deployment guide
+- **[SECURITY.md](SECURITY,�d)** - Security features & best practices
+- **[API.md](API.md)** - API documentation
+
+---
+
+## 🔐 Security Features
+
+| Feature | Status |
+|---------|--------|
+| JWT Authentication | ✅ |
+| Password Hashing | ✅ Bcrypt |
+| Rate Limiting | ✅ 10/min |
+| CORS Protection | ✅ Whitelisted |
+| SQL Injection | ✅ Protected |
+| XSS Protection | ✅ React |
+| CSRF Protection | ✅ JWT |
+| Payment Security | ✅ Stripe PCI-DSS |
+
+**Security Grade: A+** (Production Ready)
+
+---
+
+## 💳 Pricing Tiers
+
+| Tier | Price | Features |
+|------|-------|----------|
+| **Basic** | $29/mo | 10 Proposals, Basic AI |
+| **Pro** | $99/mo | Unlimited, Advanced AI |
+| **Enterprise** | $299/mo | Custom Integration, SLA |
+
+---
+
+## 🛠️ Tech Stack
+
+### Frontend
+- **Framework**: Next.js 14 (React 18)
+- **Styling**: Tailwind CSS
+- **Payments**: Stripe React
+- **HTTP**: Axios
+- **Deployment**: Vercel
+
+### Backend
+- **Framework**: FastAPI
+- **Auth**: Python-Jose + Passlib
+- **Database**: Supabase (PostgreSQL)
+- **Payments**: Stripe Python
+- _SPecurity**: SlowAPI (Rate Limiting)
+- **Deployment**: Vercel
+
+---
+
+## 📊 API Endpoints
+
+### Authentication
+- POST /api/auth/register - Create account
+- POST /api/auth/login - Login
+- GET /api/auth/me - Get user info
+
+### Payments
+- POST /api/payments/create-payment-intent - One-time payment
+- POST /api/payments/create-subscription - Start subscription
+- GET /api/payments/subscription-status - Check status
+
+### Protected Endpoints (Require Auth)
+- GET /api/opportunities/search - Search contracts
+- POST /api/ai/generate-proposal - AI proposal
+
+[Full API Documentation →](API.md)
+
+---
+
+## 🧪 Testing
+
+### Test Account
+```
+Email: test@example.com
+Password: testpass123
+```
+
+### Stripe Test Card
+```
+Card: 4242 4242 4242 4242
+Expiry: Any future date
+CVC: Any 3 digits
+```
+
+---
+
+## 📈 Roadmap
+
+- [x] v1.0 - MVP (Demo)
+- [x] v2.0 - Production (Auth + Payments)
+- [ ] v2.1 - Email notifications
+- [ ] v2.2 - Team collaboration
+- [ ] v2.3 - Advanced analytics
+- [ ] v3.0 - Mobile app
+
+---
+
+## 🤢 Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md)
+
+---
+
+## 📜 License
+
+MIT License - see [LICENSE](LICENSE)
+
+---
+
+## 📞 Support
+
+- **Email**: support@sturgeonai.com
+- **Docs**: https://docs.sturgeonai.com
+- **Issues**: https://github.com/Haroldtrapier/sturgeon-ai/issues
+
+---
+
+**Built with ❤️ by the Sturgeon AI Team**
+
+[Website](https://sturgeonai.com) • [Twitter](https://twitter.com/sturgeonai) ~ [LinkedIn](https://linkedin.com/company/sturgeonai)
