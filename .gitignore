@@ -1,39 +1,7 @@
-# Dependencies
 node_modules/
-backend/__pycache__/
-backend/.venv/
-backend/venv/
-
-# Next.js
 .next/
 out/
-build/
-dist/
-
-# Environment variables
 .env
 .env.local
-.env.production
-backend/.env
-
-# Logs
 *.log
-npm-debug.log*
-
-# OS
 .DS_Store
-Thumbs.db
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Testing
-coverage/
-.pytest_cache/
-
-# Misc
-*.pem
-.vercel
