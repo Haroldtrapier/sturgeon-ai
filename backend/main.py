@@ -1,294 +1,218 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import Optional, List
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from pydantic import BaseModel, EmailStr
+from typing import Optional
+from datetime import datetime, timedelta
+from jose import JWTError, jwt
+from passlib.context import CryptContext
 import os
-from datetime import datetime
+from dotenv import load_dotenv
+import stripe
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from supabase import create_client, Client
+
+load_dotenv()
+
+# Configuration
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "dev-secret-change-in-prod")
+JWT_ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPEE_PUBLISHABLE_KEY")
+
+SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL else None
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
+limiter = Limiter(key_func=get_remote_address)
 
 app = FastAPI(
-    title="Sturgeon AI API",
-    description="Government Contracting & Grant Management Platform",
-    version="1.0.0"
+    title="Sturgeon AI API v2.0",
+    description="Production-ready with Auth & Payments",
+    version="2.0.0"
 )
 
-# CORS middleware
+app.state.limiter = limiter
+
+# CORS
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[FRONTEND_URL],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ==================== DATA MODELS ====================
+# Models
+class UserCreate(BaseModel):
+    email: EmailStr
+    password: str
+    full_name: str
 
-class OpportunitySearch(BaseModel):
-    keywords: Optional[str] = "AI"
-    limit: Optional[int] = 10
-    agency: Optional[str] = None
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+    user: dict
 
-class ContractAnalysis(BaseModel):
-    contract_id: str
-    contract_text: str
+# Security functions
+def get_password_hash(password: str) -> str:
+    return pwd_context.hash(password)
 
-class ProposalGeneration(BaseModel):
-    contract_id: str
-    requirements: str
-    company_info: Optional[str] = None
+def verify_password(plain: str, hashed: str) -> bool:
+    return pwd_context.verify(plain, hashed)
 
-class OpportunityMatch(BaseModel):
-    company_profile: str
-    keywords: List[str]
+def create_access_token(data: dict):
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode = data.copy()
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
 
-# ==================== HEALTH CHECK ====================
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+        email = payload.get("sub")
+        if not email:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        if supabase:
+            user = supabase.table("users").select("*").eq("email", email).execute()
+            if user.data:
+                return user.data[0]
+        return {"email": email}
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
 
+# Health check
 @app.get("/health")
-async def health_check():
+async def health():
     return {
         "status": "healthy",
-        "timestamp": datetime.utcnow().isoformat(),
-        "version": "1.0.0"
+        "version": "2.0.0",
+        "features": {"auth": True, "payments": True, "database": supabase is not None}
     }
 
-# ==================== SAM.GOV INTEGRATION ====================
+# Register
+@app.post("/api/auth/register", response_model=Token)
+@limiter.limit("5/minute")
+async def register(user: UserCreate, request):
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database not configured")
+    
+    existing = supabase.table("users").select("email").eq("email", user.email).execute()
+    if existing.data:
+        raise HTTPException(status_code=400, detail="Email exists")
+    
+    hashed = get_password_hash(user.password)
+    new_user = supabase.table("users").insert({
+        "email": user.email,
+        "full_name": user.full_name,
+        "hashed_password": hashed,
+        "created_at": datetime.utcnow().isoformat()
+    }).execute()
+    
+    token = create_access_token({"sub": user.email})
+    user_data = new_user.data[0]
+    user_data.pop("hashed_password", None)
+    
+    return {"access_token": token, "token_type": "bearer", "user": user_data}
 
+# Login
+@app.post("/api/auth/login", response_model=Token)
+@limiter.limit("10/minute")
+async def login(form: OAuth2PasswordRequestForm = Depends(), request=None):
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database not configured")
+    
+    user = supabase.table("users").select("*").eq("email", form.username).execute()
+    if not user.data or not verify_password(form.password, user.data[0]["hashed_password"]):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    token = create_access_token({"sub": user.data[0]["email"]})
+    user_data = user.data[0]
+    user_data.pop("hashed_password", None)
+    
+    return {"access_token": token, "token_type": "bearer", "user": user_data}
+
+# Get current user
+@app.get("/api/auth/me")
+async def me(current_user: dict = Depends(get_current_user)):
+    return current_user
+
+# Create payment
+@app.post("/api/payments/create-payment-intent")
+async def create_payment(data: dict, current_user: dict = Depends(get_current_user)):
+    try:
+        intent = stripe.PaymentIntent.create(
+            amount=data.get("amount", 2900),
+            currency="usd",
+            metadata={"user_id": current_user.get("id")}
+        )
+        return {"client_secret": intent.client_secret, "publishable_key": STRIPE_PUBLISHABLE_KEY}
+    except stripe.error.StripeError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+# Create subscription
+@app.post("/api/payments/create-subscription")
+async def create_subscription(data: dict, current_user: dict = Depends(get_current_user)):
+    try:
+        customer = stripe.Customer.create(
+            email=current_user.get("email"),
+            payment_method=data["payment_method_id"],
+            invoice_settings={"default_payment_method": data["payment_method_id"]}
+        )
+        
+        sub = stripe.Subscription.create(
+            customer=customer.id,
+            items=[{"price": data["price_id"]}],
+            expand=["latest_invoice.payment_intent"]
+        )
+        
+        if supabase:
+            supabase.table("subscriptions").insert({
+                "user_id": current_user.get("id"),
+                "stripe_subscription_id": sub.id,
+                "stripe_customer_id": customer.id,
+                "status": sub.status,
+                "created_at": datetime.utcnow().isoformat()
+            }).execute()
+        
+        return {"subscription_id": sub.id, "status": sub.status}
+    except stripe.error.StripeError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+# Get subscription status
+@app.get("/api/payments/subscription-status")
+async def subscription_status(current_user: dict = Depends(get_current_user)):
+    if not supabase:
+        return {"has_subscription": False}
+    
+    sub = supabase.table("subscriptions").select("*").eq("user_id", current_user.get("id")).execute()
+    return {"has_subscription": bool(sub.data), "subscription": sub.data[0] if sub.data else None}
+
+# Protected: Search opportunities
 @app.get("/api/opportunities/search")
-async def search_opportunities(keywords: str = "AI", limit: int = 10, agency: str = None):
-    # Mock data for demo - replace with actual SAM.gov API call
+async def search_opportunities(keywords: str = "AI", limit: int = 10, current_user: dict = Depends(get_current_user)):
     opportunities = [
         {
             "id": "SAM-2024-001",
-            "title": f"Advanced {keywords} Solutions for Federal Agencies",
-            "agency": agency or "Department of Defense",
-            "type": "Contract",
+            "title": f"Advanced {keywords} Solutions",
+            "agency": "DOD",
             "value": "$2.5M - $5M",
-            "deadline": "2025-12-15",
-            "description": f"Development and deployment of {keywords}-powered systems",
-            "naics_code": "541512",
-            "set_aside": "8(a)",
-            "posted_date": "2024-10-15"
-        },
-        {
-            "id": "SAM-2024-002",
-            "title": f"Cloud-Based {keywords} Platform",
-            "agency": "General Services Administration",
-            "type": "Contract",
-            "value": "$1M - $3M",
-            "deadline": "2025-11-30",
-            "description": f"Scalable cloud infrastructure with {keywords} capabilities",
-            "naics_code": "541519",
-            "set_aside": "Small Business",
-            "posted_date": "2024-10-20"
+            "deadline": "2025-12-15"
         }
     ]
+    return {"success": True, "opportunities": opportunities[:limit]}
 
-    return {
-        "success": True,
-        "count": len(opportunities),
-        "opportunities": opportunities[:limit]
-    }
-
-# ==================== GRANTS.GOV INTEGRATION ====================
-
-@app.get("/api/grants/search")
-async def search_grants(keywords: str = "technology", limit: int = 10):
-    grants = [
-        {
-            "id": "GRANT-2024-001",
-            "title": f"{keywords.title()} Innovation Grant",
-            "agency": "National Science Foundation",
-            "amount": "$500,000",
-            "deadline": "2025-12-31",
-            "description": f"Support for innovative {keywords} research and development",
-            "eligibility": "Small businesses, universities, nonprofits"
-        },
-        {
-            "id": "GRANT-2024-002",
-            "title": f"Advanced {keywords.title()} Research",
-            "agency": "Department of Energy",
-            "amount": "$750,000",
-            "deadline": "2025-11-15",
-            "description": f"Cutting-edge {keywords} research initiatives",
-            "eligibility": "Research institutions, small businesses"
-        }
-    ]
-
-    return {
-        "success": True,
-        "count": len(grants),
-        "grants": grants[:limit]
-    }
-
-# ==================== AI CONTRACT ANALYSIS ====================
-
-@app.post("/api/ai/analyze-contract")
-async def analyze_contract(data: ContractAnalysis):
-    # Mock analysis - replace with OpenAI API call
-    analysis = {
-        "contract_id": data.contract_id,
-        "summary": "This contract requires cloud infrastructure services with AI capabilities.",
-        "key_requirements": [
-            "FedRAMP authorization required",
-            "24/7 support mandatory",
-            "99.9% uptime SLA",
-            "FISMA compliance",
-            "Agile development methodology"
-        ],
-        "compliance_score": 85,
-        "risk_factors": [
-            "Tight delivery timeline",
-            "Complex security requirements"
-        ],
-        "recommendations": [
-            "Highlight existing FedRAMP authorization",
-            "Emphasize proven government experience",
-            "Include detailed security plan"
-        ]
-    }
-
-    return {
-        "success": True,
-        "analysis": analysis
-    }
-
-# ==================== AI PROPOSAL GENERATION ====================
-
+# Protected: Generate proposal
 @app.post("/api/ai/generate-proposal")
-async def generate_proposal(data: ProposalGeneration):
-    # Mock generation - replace with OpenAI API call
-    proposal = f'''# Technical Proposal for Contract {data.contract_id}
-
-## Executive Summary
-Our organization is uniquely qualified to deliver exceptional results for this critical project. 
-With over 15 years of government contracting experience and deep expertise in the required 
-technologies, we are the ideal partner.
-
-## Technical Approach
-
-### Solution Architecture
-We propose a cloud-native, microservices-based architecture that ensures:
-- Scalability to handle varying workloads
-- High availability with 99.99% uptime
-- Security by design with zero-trust principles
-- Cost optimization through intelligent resource management
-
-### Implementation Plan
-Phase 1 (Months 1-3): Requirements analysis and design
-Phase 2 (Months 4-6): Core development and testing
-Phase 3 (Months 7-9): Deployment and optimization
-Phase 4 (Ongoing): Support and enhancement
-
-## Compliance & Security
-- FedRAMP High authorized infrastructure
-- FISMA compliant operations
-- NIST 800-53 controls implementation
-- Continuous monitoring and vulnerability management
-
-## Team Qualifications
-Our team brings exceptional credentials:
-- 15+ years government contracting experience
-- CMMI Level 3 certified organization
-- ISO 27001 information security certified
-- Security clearances: Top Secret/SCI available
-
-## Past Performance
-Successfully delivered 25+ government contracts totaling $50M+ in value with:
-- 100% on-time delivery rate
-- 98% customer satisfaction score
-- Zero security incidents
-
-## Pricing
-We offer competitive pricing with flexible payment terms aligned with government fiscal 
-year requirements. Detailed pricing breakdown available upon request.
-
-## Requirements Compliance
-
-{data.requirements}
-
-We meet all stated requirements and exceed expectations in the following areas:
-1. Advanced technical capabilities beyond baseline requirements
-2. Experienced team with relevant clearances
-3. Proven track record with similar projects
-4. Innovative approach to problem-solving
-
-## Conclusion
-We are committed to delivering excellence and look forward to partnering on this 
-critical initiative. Our combination of technical expertise, government experience, 
-and commitment to quality makes us the ideal choice.
-'''
-
-    return {
-        "success": True,
-        "contract_id": data.contract_id,
-        "proposal": proposal,
-        "metadata": {
-            "word_count": len(proposal.split()),
-            "sections": 8,
-            "generated_at": datetime.utcnow().isoformat()
-        }
-    }
-
-# ==================== OPPORTUNITY MATCHING ====================
-
-@app.post("/api/ai/match-opportunities")
-async def match_opportunities(data: OpportunityMatch):
-    # Mock matching algorithm
-    matches = [
-        {
-            "opportunity_id": "SAM-2024-003",
-            "title": "AI-Powered Analytics Platform",
-            "match_score": 95,
-            "reasons": [
-                "Perfect alignment with company capabilities",
-                "Matches NAICS codes",
-                "Within typical contract size range"
-            ]
-        },
-        {
-            "opportunity_id": "SAM-2024-004",
-            "title": "Cloud Infrastructure Services",
-            "match_score": 88,
-            "reasons": [
-                "Strong technical fit",
-                "Relevant past performance",
-                "Appropriate set-aside category"
-            ]
-        }
-    ]
-
-    return {
-        "success": True,
-        "matches": matches
-    }
-
-# ==================== DOCUMENT UPLOAD ====================
-
-@app.post("/api/documents/upload")
-async def upload_document():
-    return {
-        "success": True,
-        "file_id": "DOC-2024-001",
-        "message": "Document uploaded successfully"
-    }
-
-# ==================== ANALYTICS DASHBOARD ====================
-
-@app.get("/api/analytics/dashboard")
-async def get_dashboard():
-    return {
-        "success": True,
-        "metrics": {
-            "total_proposals": 45,
-            "active_opportunities": 23,
-            "win_rate": 34.5,
-            "total_value": 12500000,
-            "monthly_stats": [
-                {"month": "Jan", "proposals": 12, "wins": 4},
-                {"month": "Feb", "proposals": 15, "wins": 5},
-                {"month": "Mar", "proposals": 18, "wins": 7}
-            ]
-        }
-    }
+async def generate_proposal(data: dict, current_user: dict = Depends(get_current_user)):
+    proposal = f"# Proposal for {data.get('contract_id')}\n\n## Requirements\n{data.get('requirements')}"
+    return {"success": True, "proposal": proposal}
 
 if __name__ == "__main__":
     import uvicorn
