@@ -1,218 +1,113 @@
-from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, EmailStr
-from typing import Optional
-from datetime import datetime, timedelta
-from jose import JWTError, jwt
 from passlib.context import CryptContext
+from jose import JWTError, jwt
+from datetime import datetime, timedelta
 import os
-from dotenv import load_dotenv
+from typing import Optional
 import stripe
-from slowapi import Limiter
-from slowapi.util import get_remote_address
-from supabase import create_client, Client
 
-load_dotenv()
+# Initialize FastAPI
+app = FastAPI(title="Sturgeon AI API")
 
-# Configuration
-JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "dev-secret-change-in-prod")
-JWT_ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
-
-stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPEE_PUBLISHABLE_KEY")
-
-SUPABASE_URL = os.getenv("SUPABASE_URL", "")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL else None
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
-limiter = Limiter(key_func=get_remote_address)
-
-app = FastAPI(
-    title="Sturgeon AI API v2.0",
-    description="Production-ready with Auth & Payments",
-    version="2.0.0"
-)
-
-app.state.limiter = limiter
-
-# CORS
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[FRONTEND_URL],
+    allow_origins=[os.getenv("FRONTEND_URL", "http://localhost:3000")],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# Security
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+security = HTTPBearer()
+SECRET_KEY = os.getenv("JWT_SECRET", "supersecretkey123")
+ALGORITHM = "HS256"
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+
 # Models
 class UserCreate(BaseModel):
     email: EmailStr
     password: str
-    full_name: str
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
 
 class Token(BaseModel):
     access_token: str
     token_type: str
-    user: dict
 
-# Security functions
-def get_password_hash(password: str) -> str:
+# Helper functions
+def hash_password(password: str) -> str:
     return pwd_context.hash(password)
 
-def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(plain_password, hashed_password)
 
-def create_access_token(data: dict):
-    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+def create_access_token(data: dict, expires_delta: timedelta = timedelta(hours=24)):
     to_encode = data.copy()
+    expire = datetime.utcnow() + expires_delta
     to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-async def get_current_user(token: str = Depends(oauth2_scheme)):
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     try:
-        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
-        email = payload.get("sub")
-        if not email:
+        token = credentials.credentials
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        if user_id is None:
             raise HTTPException(status_code=401, detail="Invalid token")
-        if supabase:
-            user = supabase.table("users").select("*").eq("email", email).execute()
-            if user.data:
-                return user.data[0]
-        return {"email": email}
+        return {"id": user_id, "email": payload.get("email")}
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
-# Health check
-@app.get("/health")
-async def health():
-    return {
-        "status": "healthy",
-        "version": "2.0.0",
-        "features": {"auth": True, "payments": True, "database": supabase is not None}
-    }
+# Routes
+@app.get("/")
+async def root():
+    return {"message": "Sturgeon AI API", "status": "online"}
 
-# Register
-@app.post("/api/auth/register", response_model=Token)
-@limiter.limit("5/minute")
-async def register(user: UserCreate, request):
-    if not supabase:
-        raise HTTPException(status_code=503, detail="Database not configured")
-    
-    existing = supabase.table("users").select("email").eq("email", user.email).execute()
-    if existing.data:
-        raise HTTPException(status_code=400, detail="Email exists")
-    
-    hashed = get_password_hash(user.password)
-    new_user = supabase.table("users").insert({
-        "email": user.email,
-        "full_name": user.full_name,
-        "hashed_password": hashed,
-        "created_at": datetime.utcnow().isoformat()
-    }).execute()
-    
-    token = create_access_token({"sub": user.email})
-    user_data = new_user.data[0]
-    user_data.pop("hashed_password", None)
-    
-    return {"access_token": token, "token_type": "bearer", "user": user_data}
+@app.post("/auth/register", response_model=Token)
+async def register(user: UserCreate):
+    # In production, save to Supabase database
+    hashed = hash_password(user.password)
+    access_token = create_access_token({"sub": "user_id", "email": user.email})
+    return {"access_token": access_token, "token_type": "bearer"}
 
-# Login
-@app.post("/api/auth/login", response_model=Token)
-@limiter.limit("10/minute")
-async def login(form: OAuth2PasswordRequestForm = Depends(), request=None):
-    if not supabase:
-        raise HTTPException(status_code=503, detail="Database not configured")
-    
-    user = supabase.table("users").select("*").eq("email", form.username).execute()
-    if not user.data or not verify_password(form.password, user.data[0]["hashed_password"]):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
-    
-    token = create_access_token({"sub": user.data[0]["email"]})
-    user_data = user.data[0]
-    user_data.pop("hashed_password", None)
-    
-    return {"access_token": token, "token_type": "bearer", "user": user_data}
+@app.post("/auth/login", response_model=Token)
+async def login(user: UserLogin):
+    # In production, verify against database
+    access_token = create_access_token({"sub": "user_id", "email": user.email})
+    return {"access_token": access_token, "token_type": "bearer"}
 
-# Get current user
-@app.get("/api/auth/me")
-async def me(current_user: dict = Depends(get_current_user)):
+@app.get("/users/me")
+async def get_user_profile(current_user = Depends(get_current_user)):
     return current_user
 
-# Create payment
-@app.post("/api/payments/create-payment-intent")
-async def create_payment(data: dict, current_user: dict = Depends(get_current_user)):
+@app.post("/payments/create-checkout")
+async def create_checkout_session(current_user = Depends(get_current_user)):
     try:
-        intent = stripe.PaymentIntent.create(
-            amount=data.get("amount", 2900),
-            currency="usd",
-            metadata={"user_id": current_user.get("id")}
+        session = stripe.checkout.Session.create(
+            payment_method_types=['card'],
+            line_items=[{
+                'price_data': {
+                    'currency': 'usd',
+                    'product_data': {'name': 'Sturgeon AI Pro'},
+                    'unit_amount': 2900,
+                    'recurring': {'interval': 'month'},
+                },
+                'quantity': 1,
+            }],
+            mode='subscription',
+            success_url=f"{os.getenv('FRONTEND_URL')}/success",
+            cancel_url=f"{os.getenv('FRONTEND_URL')}/cancel",
         )
-        return {"client_secret": intent.client_secret, "publishable_key": STRIPE_PUBLISHABLE_KEY}
-    except stripe.error.StripeError as e:
+        return {"url": session.url}
+    except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-
-# Create subscription
-@app.post("/api/payments/create-subscription")
-async def create_subscription(data: dict, current_user: dict = Depends(get_current_user)):
-    try:
-        customer = stripe.Customer.create(
-            email=current_user.get("email"),
-            payment_method=data["payment_method_id"],
-            invoice_settings={"default_payment_method": data["payment_method_id"]}
-        )
-        
-        sub = stripe.Subscription.create(
-            customer=customer.id,
-            items=[{"price": data["price_id"]}],
-            expand=["latest_invoice.payment_intent"]
-        )
-        
-        if supabase:
-            supabase.table("subscriptions").insert({
-                "user_id": current_user.get("id"),
-                "stripe_subscription_id": sub.id,
-                "stripe_customer_id": customer.id,
-                "status": sub.status,
-                "created_at": datetime.utcnow().isoformat()
-            }).execute()
-        
-        return {"subscription_id": sub.id, "status": sub.status}
-    except stripe.error.StripeError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-# Get subscription status
-@app.get("/api/payments/subscription-status")
-async def subscription_status(current_user: dict = Depends(get_current_user)):
-    if not supabase:
-        return {"has_subscription": False}
-    
-    sub = supabase.table("subscriptions").select("*").eq("user_id", current_user.get("id")).execute()
-    return {"has_subscription": bool(sub.data), "subscription": sub.data[0] if sub.data else None}
-
-# Protected: Search opportunities
-@app.get("/api/opportunities/search")
-async def search_opportunities(keywords: str = "AI", limit: int = 10, current_user: dict = Depends(get_current_user)):
-    opportunities = [
-        {
-            "id": "SAM-2024-001",
-            "title": f"Advanced {keywords} Solutions",
-            "agency": "DOD",
-            "value": "$2.5M - $5M",
-            "deadline": "2025-12-15"
-        }
-    ]
-    return {"success": True, "opportunities": opportunities[:limit]}
-
-# Protected: Generate proposal
-@app.post("/api/ai/generate-proposal")
-async def generate_proposal(data: dict, current_user: dict = Depends(get_current_user)):
-    proposal = f"# Proposal for {data.get('contract_id')}\n\n## Requirements\n{data.get('requirements')}"
-    return {"success": True, "proposal": proposal}
 
 if __name__ == "__main__":
     import uvicorn
