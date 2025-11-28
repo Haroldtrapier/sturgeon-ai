@@ -1,12 +1,10 @@
-import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { type NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
-import { prisma } from "./db";
+import { supabase } from "@/lib/supabase";
 import { comparePassword } from "@/lib/auth";
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
   session: {
     strategy: "jwt",
   },
@@ -29,13 +27,14 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Invalid credentials");
         }
 
-        const user = await prisma.user.findUnique({
-          where: {
-            email: credentials.email,
-          },
-        });
+        // Query Supabase for user
+        const { data: user, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('email', credentials.email)
+          .single();
 
-        if (!user || !user.password) {
+        if (error || !user || !user.password) {
           throw new Error("Invalid credentials");
         }
 
@@ -65,36 +64,17 @@ export const authOptions: NextAuthOptions = {
         session.user.email = token.email;
         session.user.image = token.picture;
       }
-
       return session;
     },
     async jwt({ token, user }) {
-      const dbUser = await prisma.user.findFirst({
-        where: {
-          email: token.email,
-        },
-      });
-
-      if (!dbUser) {
-        if (user) {
-          token.id = user?.id;
-        }
-        return token;
+      if (user) {
+        token.id = user.id;
       }
-
-      return {
-        id: dbUser.id,
-        name: dbUser.name,
-        email: dbUser.email,
-        picture: dbUser.image,
-      };
+      return token;
     },
   },
 };
 
-/**
- * Get server-side session (use in Server Components and API routes)
- */
 export async function getServerAuthSession() {
   const { getServerSession } = await import("next-auth");
   return getServerSession(authOptions);
