@@ -22,7 +22,7 @@ export class APIClient {
     return response.json();
   }
 
-  static async login(email: string, password: string)) {
+  static async login(email: string, password: string) {
     const response = await fetch(`${API_BASE_URL}/auth/login`, {
       method: 'POST',
       headers: this.getHeaders(),
