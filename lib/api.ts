@@ -1,4 +1,5 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+// Call Next.js API routes instead of external backend
+const API_BASE_URL = '/api'; // Internal Next.js API routes
 
 export class APIClient {
   private static getHeaders() {
