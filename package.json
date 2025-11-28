@@ -2,6 +2,7 @@
   "name": "sturgeon-ai",
   "version": "0.1.0",
   "private": true,
+  "description": "Sturgeon AI - Government Contracting Platform with NextAuth + Prisma",
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
