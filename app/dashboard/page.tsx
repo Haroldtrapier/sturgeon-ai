@@ -1,10 +1,8 @@
-'use client';
-
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { redirect } from "next/navigation";
+import Link from "next/link";
+import { getServerAuthSession } from "@/server/auth";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { 
   FileText, 
   Search, 
@@ -12,23 +10,21 @@ import {
   Award,
   Bell,
   Settings
-} from 'lucide-react';
+} from "lucide-react";
 
-export default function DashboardPage() {
-  const router = useRouter();
-  const [stats, setStats] = useState({
+export default async function DashboardPage() {
+  const session = await getServerAuthSession();
+
+  if (!session) {
+    redirect("/login");
+  }
+
+  const stats = {
     activeProposals: 12,
     opportunities: 45,
     winRate: 34,
     totalValue: 2.4
-  });
-
-  useEffect(() => {
-    const isAuth = localStorage.getItem('isAuthenticated');
-    if (!isAuth) {
-      router.push('/login');
-    }
-  }, [router]);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -46,6 +42,9 @@ export default function DashboardPage() {
               <Button variant="ghost" size="icon">
                 <Settings className="h-5 w-5" />
               </Button>
+              <p className="text-sm text-gray-600">
+                {session.user?.email}
+              </p>
             </div>
           </div>
         </div>
@@ -55,7 +54,9 @@ export default function DashboardPage() {
         {/* Header */}
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-gray-900">Dashboard</h2>
-          <p className="mt-2 text-gray-600">Welcome back! Here's your overview.</p>
+          <p className="mt-2 text-gray-600">
+            Welcome back, {session.user?.name || session.user?.email}! Here\'s your overview.
+          </p>
         </div>
 
         {/* Stats Grid */}
