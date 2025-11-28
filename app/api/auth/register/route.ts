@@ -1,30 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { email, password } = body;
 
-    // Forward to backend
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
-    const response = await fetch(`${backendUrl}/auth/register`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email, password }),
+    // Use Supabase Auth directly
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
     });
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      return NextResponse.json(data, { status: response.status });
+    if (error) {
+      return NextResponse.json(
+        { detail: error.message },
+        { status: 400 }
+      );
     }
 
-    return NextResponse.json(data);
-  } catch (error) {
+    return NextResponse.json({ 
+      message: 'Registration successful',
+      user: data.user 
+    });
+  } catch (error: any) {
     return NextResponse.json(
-      { detail: 'Registration failed' },
+      { detail: error.message || 'Registration failed' },
       { status: 500 }
     );
   }
