@@ -62,3 +62,49 @@ export class APIClient {
     localStorage.removeItem('token');
   }
 }
+
+// API Response helper functions for server-side routes
+import { NextResponse } from 'next/server';
+
+export function createSuccessResponse(data: any, message?: string) {
+  return {
+    success: true,
+    data,
+    message,
+  };
+}
+
+export function createErrorResponse(message: string, status: number = 500) {
+  return NextResponse.json(
+    {
+      success: false,
+      error: message,
+    },
+    { status }
+  );
+}
+
+export function setAuthCookie(response: NextResponse, token: string, refreshToken: string) {
+  // Set access token cookie
+  response.cookies.set('access_token', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 60 * 15, // 15 minutes
+    path: '/',
+  });
+
+  // Set refresh token cookie
+  response.cookies.set('refresh_token', refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 60 * 60 * 24 * 7, // 7 days
+    path: '/',
+  });
+}
+
+export function clearAuthCookies(response: NextResponse) {
+  response.cookies.delete('access_token');
+  response.cookies.delete('refresh_token');
+}
