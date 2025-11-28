@@ -1,71 +1,81 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { comparePassword } from '@/lib/auth';
-import { generateToken, generateRefreshToken } from '@/lib/auth';
-import { setAuthCookie, createErrorResponse, createSuccessResponse } from '@/lib/api';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Enable CORS
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
 
-export async function POST(request: Request) {
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders });
+}
+
+export async function POST(request: NextRequest) {
   try {
+    // Parse request body
     const body = await request.json();
     const { email, password } = body;
 
     // Validate input
     if (!email || !password) {
-      return createErrorResponse('Email and password are required', 400);
+      return NextResponse.json(
+        { error: 'Email and password are required' },
+        { status: 400, headers: corsHeaders }
+      );
     }
 
-    // Find user in database
-    const { data: user, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', email.toLowerCase())
-      .single();
+    // Check environment variables
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-    if (error || !user) {
-      return createErrorResponse('Invalid email or password', 401);
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error('Missing Supabase environment variables');
+      return NextResponse.json(
+        { error: 'Server configuration error. Please contact support.' },
+        { status: 500, headers: corsHeaders }
+      );
     }
 
-    // Verify password
-    const isValidPassword = await comparePassword(password, user.password_hash);
+    // Create Supabase client
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-    if (!isValidPassword) {
-      return createErrorResponse('Invalid email or password', 401);
+    // Sign in user
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      console.error('Supabase sign in error:', error);
+      return NextResponse.json(
+        { error: error.message },
+        { status: 401, headers: corsHeaders }
+      );
     }
 
-    // Generate tokens
-    const userPayload = {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-    };
-
-    const token = generateToken(userPayload);
-    const refreshToken = generateRefreshToken(userPayload);
-
-    // Create response
-    const response = NextResponse.json(
-      createSuccessResponse({
-        token,
-        refreshToken,
+    // Return success with session
+    return NextResponse.json(
+      { 
+        success: true,
+        message: 'Login successful!',
         user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
+          id: data.user?.id,
+          email: data.user?.email,
         },
-      }, 'Login successful')
+        session: {
+          access_token: data.session?.access_token,
+          refresh_token: data.session?.refresh_token,
+        }
+      },
+      { status: 200, headers: corsHeaders }
     );
-
-    // Set secure cookies
-    setAuthCookie(response, token, refreshToken);
-
-    return response;
   } catch (error: any) {
     console.error('Login error:', error);
-    return createErrorResponse('An error occurred during login', 500);
+    return NextResponse.json(
+      { error: error.message || 'An unexpected error occurred' },
+      { status: 500, headers: corsHeaders }
+    );
   }
 }
