@@ -1,16 +1,11 @@
-import { PrismaClient } from "@prisma/client";
+// Supabase client - no Prisma needed since we're using Supabase
+import { createClient } from "@supabase/supabase-js";
 
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
-};
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
-    log:
-      process.env.NODE_ENV === "development"
-        ? ["query", "error", "warn"]
-        : ["error"],
-  });
+// For server-side use with service role key
+export const supabase = createClient(supabaseUrl, supabaseKey);
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+// Export a mock prisma object for compatibility if needed
+export const prisma = null;
