@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, EmailStr
@@ -8,17 +8,56 @@ from datetime import datetime, timedelta
 import os
 from typing import Optional
 import stripe
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+import sentry_sdk
+from sentry_sdk.integrations.fastapi import FastApiIntegration
+from sentry_sdk.integrations.starlette import StarletteIntegration
+
+# Initialize Sentry (optional - only if SENTRY_DSN is set)
+if sentry_dsn := os.getenv("SENTRY_DSN"):
+    sentry_sdk.init(
+        dsn=sentry_dsn,
+        integrations=[
+            StarletteIntegration(transaction_style="url"),
+            FastApiIntegration(transaction_style="url"),
+        ],
+        traces_sample_rate=1.0,
+        environment=os.getenv("ENVIRONMENT", "production"),
+    )
+
+# Initialize rate limiter
+limiter = Limiter(key_func=get_remote_address, default_limits=["100/hour"])
 
 # Initialize FastAPI
 app = FastAPI(title="Sturgeon AI API")
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# CORS middleware
+# CORS middleware - LOCKED DOWN FOR PRODUCTION
+# Only allow requests from your production domains
+ALLOWED_ORIGINS = [
+    "https://sturgeon-ai-prod.vercel.app",
+    "https://sturgeon-ai.vercel.app",
+    # Add your custom domain when you set it up:
+    # "https://sturgeonai.com",
+    # "https://www.sturgeonai.com",
+]
+
+# Allow localhost in development only
+if os.getenv("ENVIRONMENT") == "development":
+    ALLOWED_ORIGINS.extend([
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ])
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[os.getenv("FRONTEND_URL", "http://localhost:3000")],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE"],  # Explicit methods instead of "*"
+    allow_headers=["Content-Type", "Authorization"],  # Explicit headers instead of "*"
 )
 
 # Security
@@ -67,28 +106,33 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
 
 # Routes
 @app.get("/")
-async def root():
+@limiter.limit("50/minute")
+async def root(request: Request):
     return {"message": "Sturgeon AI API", "status": "online"}
 
 @app.post("/auth/register", response_model=Token)
-async def register(user: UserCreate):
+@limiter.limit("5/minute")  # Strict rate limit on registration
+async def register(user: UserCreate, request: Request):
     # In production, save to Supabase database
     hashed = hash_password(user.password)
     access_token = create_access_token({"sub": "user_id", "email": user.email})
     return {"access_token": access_token, "token_type": "bearer"}
 
 @app.post("/auth/login", response_model=Token)
-async def login(user: UserLogin):
+@limiter.limit("10/minute")  # Strict rate limit on login
+async def login(user: UserLogin, request: Request):
     # In production, verify against database
     access_token = create_access_token({"sub": "user_id", "email": user.email})
     return {"access_token": access_token, "token_type": "bearer"}
 
 @app.get("/users/me")
-async def get_user_profile(current_user = Depends(get_current_user)):
+@limiter.limit("100/minute")
+async def get_user_profile(request: Request, current_user = Depends(get_current_user)):
     return current_user
 
 @app.post("/payments/create-checkout")
-async def create_checkout_session(current_user = Depends(get_current_user)):
+@limiter.limit("20/minute")
+async def create_checkout_session(request: Request, current_user = Depends(get_current_user)):
     try:
         session = stripe.checkout.Session.create(
             payment_method_types=['card'],
