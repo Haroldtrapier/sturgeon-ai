@@ -123,7 +123,7 @@ export default function BillingPage() {
             <div>
               <h3 className="text-lg font-semibold text-slate-50">Enterprise</h3>
               <div className="mt-2">
-                <span className="text-3xl font-bold text-slate-50">$249</span>
+                <span className="text-3xl font-bold text-slate-50">$149</span>
                 <span className="text-sm text-slate-400">/month</span>
               </div>
             </div>
