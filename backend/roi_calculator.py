@@ -167,9 +167,13 @@ class ROICalculator:
         else:
             expected_customers = 0
         
+        # Fallback calculation constants
+        MINIMUM_BUDGET_THRESHOLD = 100  # Minimum budget for customer acquisition
+        FALLBACK_COST_PER_CUSTOMER = 1000  # Conservative estimate when specific data unavailable
+        
         # Ensure at least some customers if budget is reasonable
-        if expected_customers == 0 and budget > 100:
-            expected_customers = max(1, int(budget / 1000))
+        if expected_customers == 0 and budget > MINIMUM_BUDGET_THRESHOLD:
+            expected_customers = max(1, int(budget / FALLBACK_COST_PER_CUSTOMER))
         
         # Calculate revenue and ROI
         expected_revenue = expected_customers * avg_customer_value
