@@ -150,6 +150,12 @@ class ROICalculator:
         Returns:
             dict: Optimized allocation with expected results
         """
+        # Validate inputs
+        if not channels:
+            raise ValueError("At least one channel must be provided")
+        if len(channels) < 2:
+            raise ValueError("At least two channels must be provided for optimization")
+        
         # Calculate ROI for each channel with equal split
         test_budget = total_budget / len(channels)
         channel_performance = {}
@@ -171,6 +177,14 @@ class ROICalculator:
         
         # Allocate budget based on ROI (weighted approach)
         total_roi = sum(perf["roi_multiple"] for _, perf in sorted_channels)
+        
+        # Handle edge case where all channels have zero ROI
+        if total_roi == 0:
+            # Fall back to equal distribution
+            total_roi = len(sorted_channels)
+            for _, perf in sorted_channels:
+                perf["roi_multiple"] = 1.0
+        
         allocation = {}
         
         for channel, perf in sorted_channels:
@@ -204,7 +218,7 @@ class ROICalculator:
             },
             "execution_priority": [
                 f"1. Start with {sorted_channels[0][0].replace('_', ' ').title()} (highest ROI: {sorted_channels[0][1]['roi_multiple']:.1f}x)",
-                f"2. Layer in {sorted_channels[1][0].replace('_', ' ').title()} after 30 days",
+                f"2. Layer in {sorted_channels[1][0].replace('_', ' ').title()} after 30 days" if len(sorted_channels) > 1 else None,
                 f"3. Add {sorted_channels[2][0].replace('_', ' ').title()} once first two channels are optimized" if len(sorted_channels) > 2 else None,
                 "4. Review and rebalance monthly based on actual performance"
             ]

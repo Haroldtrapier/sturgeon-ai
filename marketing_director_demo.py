@@ -14,7 +14,6 @@ sys.path.append(os.path.dirname(__file__))
 
 from campaign_generator import campaign_gen
 from roi_calculator import roi_calc
-import json
 
 
 def print_header(text):
