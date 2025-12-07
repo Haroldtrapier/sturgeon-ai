@@ -56,6 +56,19 @@ CREATE TABLE IF NOT EXISTS contract_analyses (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- PostgreSQL function for efficient distinct user counting
+CREATE OR REPLACE FUNCTION count_distinct_active_users(cutoff_timestamp TIMESTAMP WITH TIME ZONE)
+RETURNS INTEGER AS $$
+BEGIN
+    RETURN (
+        SELECT COUNT(DISTINCT user_id)
+        FROM analytics_events
+        WHERE timestamp >= cutoff_timestamp
+        AND user_id IS NOT NULL
+    );
+END;
+$$ LANGUAGE plpgsql;
+
 -- Enable Row Level Security for new tables
 ALTER TABLE analytics_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE contract_analyses ENABLE ROW LEVEL SECURITY;

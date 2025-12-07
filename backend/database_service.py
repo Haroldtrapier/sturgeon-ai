@@ -8,6 +8,7 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 from config import settings
 import structlog
+import random
 
 logger = structlog.get_logger()
 
@@ -61,17 +62,26 @@ class SupabaseService:
         try:
             cutoff_date = (datetime.utcnow() - timedelta(days=days)).isoformat()
             
+            # Use PostgreSQL to count distinct users for better performance
             result = (
-                self.client.table("analytics_events")
-                .select("user_id", count="exact")
-                .gte("timestamp", cutoff_date)
-                .not_.is_("user_id", "null")
-                .execute()
+                self.client.rpc('count_distinct_active_users', {
+                    'cutoff_timestamp': cutoff_date
+                }).execute()
             )
             
-            # Count unique user_ids
-            unique_users = len(set(event["user_id"] for event in result.data if event.get("user_id")))
-            return unique_users
+            # Fallback to Python-based counting if RPC function doesn't exist
+            if result.data is None:
+                result = (
+                    self.client.table("analytics_events")
+                    .select("user_id")
+                    .gte("timestamp", cutoff_date)
+                    .not_.is_("user_id", "null")
+                    .execute()
+                )
+                unique_users = len(set(event["user_id"] for event in result.data if event.get("user_id")))
+                return unique_users
+            
+            return result.data if isinstance(result.data, int) else 0
             
         except Exception as e:
             logger.error("failed_to_get_active_users", error=str(e))
@@ -216,7 +226,6 @@ class SupabaseService:
             )
             
             # Simulate contract analysis (replace with actual AI analysis)
-            import random
             analysis_score = random.uniform(0.6, 0.95)
             
             risk_factors = [
@@ -244,7 +253,7 @@ class SupabaseService:
                 "completed_at": datetime.utcnow().isoformat()
             }
             
-            # Store analysis results
+            # Store analysis results (Supabase client operations are synchronous)
             self.client.table("contract_analyses").insert({
                 "contract_id": contract_id,
                 "user_id": user_id,
