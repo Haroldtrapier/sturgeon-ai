@@ -64,4 +64,7 @@ dist/
 build/
 
 # Docker
-docker-compose.override.yml.next/
+docker-compose.override.yml
+
+# Next.js
+.next/

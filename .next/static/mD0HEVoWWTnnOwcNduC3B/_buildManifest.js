@@ -1,1 +1,0 @@
-self.__BUILD_MANIFEST={__rewrites:{afterFiles:[],beforeFiles:[],fallback:[]},"/_error":["static/chunks/pages/_error-deeb844d2074b9d8.js"],"/reset-password":["static/chunks/177-12787c50ebd9b447.js","static/chunks/pages/reset-password-bac4e5875f86938e.js"],sortedPages:["/_app","/_error","/reset-password"]},self.__BUILD_MANIFEST_CB&&self.__BUILD_MANIFEST_CB();
