@@ -48,27 +48,33 @@ ORDER BY total_events DESC;
 
 ```sql
 -- Session duration distribution
+WITH duration_buckets AS (
+    SELECT 
+        CASE 
+            WHEN duration_seconds < 60 THEN '< 1 min'
+            WHEN duration_seconds < 300 THEN '1-5 min'
+            WHEN duration_seconds < 900 THEN '5-15 min'
+            WHEN duration_seconds < 1800 THEN '15-30 min'
+            ELSE '> 30 min'
+        END as duration_bucket,
+        CASE 
+            WHEN duration_seconds < 60 THEN 1
+            WHEN duration_seconds < 300 THEN 2
+            WHEN duration_seconds < 900 THEN 3
+            WHEN duration_seconds < 1800 THEN 4
+            ELSE 5
+        END as bucket_order,
+        page_views
+    FROM user_sessions
+    WHERE ended_at IS NOT NULL
+)
 SELECT 
-    CASE 
-        WHEN duration_seconds < 60 THEN '< 1 min'
-        WHEN duration_seconds < 300 THEN '1-5 min'
-        WHEN duration_seconds < 900 THEN '5-15 min'
-        WHEN duration_seconds < 1800 THEN '15-30 min'
-        ELSE '> 30 min'
-    END as duration_bucket,
+    duration_bucket,
     COUNT(*) as session_count,
     AVG(page_views) as avg_page_views
-FROM user_sessions
-WHERE ended_at IS NOT NULL
-GROUP BY duration_bucket
-ORDER BY 
-    CASE 
-        WHEN duration_seconds < 60 THEN 1
-        WHEN duration_seconds < 300 THEN 2
-        WHEN duration_seconds < 900 THEN 3
-        WHEN duration_seconds < 1800 THEN 4
-        ELSE 5
-    END;
+FROM duration_buckets
+GROUP BY duration_bucket, bucket_order
+ORDER BY bucket_order;
 
 -- Top active users by session count
 SELECT 

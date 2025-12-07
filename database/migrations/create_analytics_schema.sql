@@ -70,6 +70,7 @@ CREATE TABLE IF NOT EXISTS user_sessions (
 );
 
 -- Create indexes
+CREATE INDEX IF NOT EXISTS idx_user_sessions_session_id ON user_sessions(session_id);
 CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id ON user_sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_sessions_started_at ON user_sessions(started_at DESC);
 
@@ -87,6 +88,7 @@ CREATE TABLE IF NOT EXISTS revenue_events (
 );
 
 -- Create indexes
+CREATE INDEX IF NOT EXISTS idx_revenue_events_transaction_id ON revenue_events(transaction_id);
 CREATE INDEX IF NOT EXISTS idx_revenue_events_user_id ON revenue_events(user_id);
 CREATE INDEX IF NOT EXISTS idx_revenue_events_created_at ON revenue_events(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_revenue_events_amount ON revenue_events(amount);
