@@ -14,6 +14,13 @@ from auth import (
 from config import settings
 
 
+# Test helper
+class MockCredentials:
+    """Mock HTTPAuthorizationCredentials for testing"""
+    def __init__(self, token):
+        self.credentials = token
+
+
 @pytest.mark.asyncio
 async def test_verify_admin_token_success():
     """Test successful admin token verification"""
@@ -64,11 +71,6 @@ async def test_verify_admin_token_wrong_token():
 @pytest.mark.asyncio
 async def test_get_current_admin_success():
     """Test successful admin verification using HTTPBearer"""
-    # Create mock credentials
-    class MockCredentials:
-        def __init__(self, token):
-            self.credentials = token
-    
     credentials = MockCredentials(settings.admin_bearer_token)
     result = await get_current_admin(credentials=credentials)
     assert result == "admin"
@@ -77,11 +79,6 @@ async def test_get_current_admin_success():
 @pytest.mark.asyncio
 async def test_get_current_admin_invalid_credentials():
     """Test admin verification fails with invalid credentials"""
-    # Create mock credentials
-    class MockCredentials:
-        def __init__(self, token):
-            self.credentials = token
-    
     credentials = MockCredentials("invalid_token")
     with pytest.raises(AdminAuthError) as exc_info:
         await get_current_admin(credentials=credentials)
