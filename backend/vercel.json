@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "name": "sturgeon-analytics",
+  "builds": [
+    {
+      "src": "main.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "main.py"
+    }
+  ],
+  "env": {
+    "SUPABASE_URL": "@supabase-url",
+    "SUPABASE_KEY": "@supabase-key",
+    "SUPABASE_SERVICE_KEY": "@supabase-service-key",
+    "ADMIN_SECRET_KEY": "@admin-secret-key",
+    "ADMIN_BEARER_TOKEN": "@admin-bearer-token"
+  }
+}
