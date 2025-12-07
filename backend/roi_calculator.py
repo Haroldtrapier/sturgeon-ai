@@ -12,6 +12,9 @@ class ROICalculator:
     VIRAL_COEFFICIENT = 0.05  # 5% monthly viral growth from existing customer base
     MONTHLY_SUBSCRIPTION_VALUE = 200  # Monthly subscription value (MRR per customer)
     ALLOCATION_STRATEGY = [0.50, 0.30, 0.20]  # Budget allocation for top 3 channels
+    CUSTOMER_RETENTION_YEARS = 2  # Average customer retention period
+    ROI_TEST_BUDGET = 1000  # Standard budget for relative ROI testing
+    ROI_TEST_DURATION = 3  # Standard duration in months for ROI testing
     
     # Industry benchmarks for different channels
     CHANNEL_BENCHMARKS = {
@@ -94,7 +97,7 @@ class ROICalculator:
         
         # Calculate efficiency metrics
         cost_per_customer = budget / customers if customers > 0 else 0
-        customer_lifetime_value = benchmarks['avg_customer_value'] * 2  # Assume 2-year retention
+        customer_lifetime_value = benchmarks['avg_customer_value'] * self.CUSTOMER_RETENTION_YEARS
         ltv_cac_ratio = customer_lifetime_value / cost_per_customer if cost_per_customer > 0 else 0
         payback_months = cost_per_customer / (benchmarks['avg_customer_value'] / 12) if benchmarks['avg_customer_value'] > 0 else 0
         
@@ -145,19 +148,17 @@ class ROICalculator:
         Returns:
             dict: Optimized allocation with expected results per channel
         """
-        # Calculate ROI potential for each channel (using 3-month standard)
+        # Calculate ROI potential for each channel using standard test parameters
         channel_rois = {}
         for channel in channels:
             if channel in self.CHANNEL_BENCHMARKS:
-                # Test with $1000 to get relative ROI
-                test_roi = self.calculate_campaign_roi(channel, 1000, 3)
+                test_roi = self.calculate_campaign_roi(channel, self.ROI_TEST_BUDGET, self.ROI_TEST_DURATION)
                 channel_rois[channel] = test_roi['returns']['roi_percentage']
         
         # Sort channels by ROI
         sorted_channels = sorted(channel_rois.items(), key=lambda x: x[1], reverse=True)
         
         # Allocate budget using class-defined strategy
-        # Best channel gets 50%, second gets 30%, third gets 20%
         allocation_percentages = self.ALLOCATION_STRATEGY
         
         optimized_allocation = {}

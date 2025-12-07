@@ -8,6 +8,9 @@ Generates LinkedIn outreach campaigns and email nurture sequences
 class CampaignGenerator:
     """Marketing campaign generator with pre-built templates and sequences"""
     
+    # Configuration constants
+    DEMO_BOOKING_RATE = 0.08  # 8% conversion rate for demo bookings
+    
     def generate_linkedin_outreach_campaign(self, target_persona, campaign_goal, target_count):
         """
         Generate a complete LinkedIn outreach campaign
@@ -65,12 +68,12 @@ class CampaignGenerator:
                     'connection_rate': '35%',
                     'response_rate': '15%',
                     'meeting_booking_rate': '8%',
-                    'expected_demos_booked': int(target_count * 0.08)
+                    'expected_demos_booked': int(target_count * self.DEMO_BOOKING_RATE)
                 },
                 'success_metrics': {
                     'connection_acceptance': 0.35,
                     'message_response': 0.15,
-                    'demo_booking': 0.08
+                    'demo_booking': self.DEMO_BOOKING_RATE
                 },
                 'execution_checklist': [
                     'Build target list using Sales Navigator (BD Directors, 50-500 employees, GovCon industry)',
@@ -88,7 +91,7 @@ class CampaignGenerator:
         campaign = campaigns.get(target_persona, campaigns['bd_director'])
         
         # Update target count dependent metrics
-        campaign['expected_outcomes']['expected_demos_booked'] = int(target_count * 0.08)
+        campaign['expected_outcomes']['expected_demos_booked'] = int(target_count * self.DEMO_BOOKING_RATE)
         campaign['target_count'] = target_count
         
         return campaign
