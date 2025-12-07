@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import Link from "next/link";
 import { supabase } from "../../lib/supabase";
 
 export default function ForgotPasswordPage() {
@@ -15,7 +16,7 @@ export default function ForgotPasswordPage() {
     setErrorMsg(null);
     setSuccessMsg(null);
 
-    const redirectUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/reset-password`;
+    const redirectUrl = `${process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== 'undefined' ? window.location.origin : '')}/reset-password`;
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: redirectUrl,
@@ -81,9 +82,9 @@ export default function ForgotPasswordPage() {
 
         <p className="mt-4 text-sm text-center text-slate-500">
           Remembered your password?{" "}
-          <a href="/login" className="text-blue-600 hover:underline">
+          <Link href="/login" className="text-blue-600 hover:underline">
             Back to login
-          </a>
+          </Link>
         </p>
       </div>
     </div>
