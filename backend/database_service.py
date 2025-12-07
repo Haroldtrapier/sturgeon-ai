@@ -269,5 +269,23 @@ class SupabaseService:
             return False
 
 
-# Global service instance
-db_service = SupabaseService()
+# Global service instance - lazy initialization
+_db_service = None
+
+
+def get_db_service() -> SupabaseService:
+    """Get or create the global database service instance"""
+    global _db_service
+    if _db_service is None:
+        _db_service = SupabaseService()
+    return _db_service
+
+
+# For backwards compatibility
+db_service = None  # Will be set on first import if settings are available
+try:
+    if settings.supabase_url and settings.supabase_service_key:
+        db_service = SupabaseService()
+except Exception:
+    # Allow module import even if Supabase is not configured
+    pass
