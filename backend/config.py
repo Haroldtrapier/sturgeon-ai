@@ -14,8 +14,8 @@ class Settings(BaseSettings):
     debug: bool = True
     
     # Security
-    jwt_secret: str = "supersecretkey123"
-    admin_token: str = "admin-secret-token"
+    jwt_secret: str
+    admin_token: str
     
     # Database
     database_url: Optional[str] = None
@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     # API Keys
     openai_api_key: Optional[str] = None
     stripe_secret_key: Optional[str] = None
+    stripe_webhook_secret: Optional[str] = None
     
     # URLs
     frontend_url: str = "http://localhost:3000"

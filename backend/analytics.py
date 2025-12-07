@@ -178,10 +178,11 @@ async def get_metrics(
             end_date=end_date
         )
         
-        conversion_rate = (
-            (revenue_stats["transaction_count"] / total_registrations * 100)
-            if total_registrations > 0 else 0.0
-        )
+        # Calculate conversion rate with safe division
+        if total_registrations > 0:
+            conversion_rate = revenue_stats["transaction_count"] / total_registrations * 100
+        else:
+            conversion_rate = 0.0
         
         # Calculate average session duration (simulated for now)
         avg_session_duration = 8.5  # minutes - replace with actual calculation

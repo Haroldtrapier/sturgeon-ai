@@ -43,7 +43,7 @@ async def verify_admin_token(authorization: Optional[str] = None):
     
     # Verify token against configured admin token
     if token != settings.admin_token:
-        logger.warning("invalid_admin_token", token_prefix=token[:10] if len(token) > 10 else token)
+        logger.warning("invalid_admin_token")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid admin token",
