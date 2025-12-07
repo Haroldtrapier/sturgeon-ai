@@ -89,7 +89,8 @@ class CampaignGenerator:
         
         # Get campaign template based on persona
         if target_persona not in campaigns:
-            # Use bd_director as default but this is the only persona currently supported
+            # Use bd_director as default - this is currently the only persona supported
+            print(f"Warning: Unknown persona '{target_persona}', using 'bd_director' template as default")
             target_persona = 'bd_director'
         campaign = campaigns[target_persona]
         

@@ -158,12 +158,18 @@ class ROICalculator:
         # Sort channels by ROI
         sorted_channels = sorted(channel_rois.items(), key=lambda x: x[1], reverse=True)
         
-        # Validate channel count
+        # Validate channel count and adjust allocation
         if len(sorted_channels) > len(self.ALLOCATION_STRATEGY):
             sorted_channels = sorted_channels[:len(self.ALLOCATION_STRATEGY)]
         
-        # Allocate budget using class-defined strategy
+        # Allocate budget proportionally based on number of channels available
         allocation_percentages = self.ALLOCATION_STRATEGY[:len(sorted_channels)]
+        # Normalize percentages to sum to 1.0 if we have fewer channels
+        total_allocated = sum(allocation_percentages)
+        if total_allocated < 1.0 and len(allocation_percentages) > 0:
+            # Redistribute remaining budget proportionally
+            scaling_factor = 1.0 / total_allocated
+            allocation_percentages = [p * scaling_factor for p in allocation_percentages]
         
         optimized_allocation = {}
         total_customers = 0
