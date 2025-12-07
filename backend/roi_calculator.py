@@ -158,8 +158,12 @@ class ROICalculator:
         # Sort channels by ROI
         sorted_channels = sorted(channel_rois.items(), key=lambda x: x[1], reverse=True)
         
+        # Validate channel count
+        if len(sorted_channels) > len(self.ALLOCATION_STRATEGY):
+            sorted_channels = sorted_channels[:len(self.ALLOCATION_STRATEGY)]
+        
         # Allocate budget using class-defined strategy
-        allocation_percentages = self.ALLOCATION_STRATEGY
+        allocation_percentages = self.ALLOCATION_STRATEGY[:len(sorted_channels)]
         
         optimized_allocation = {}
         total_customers = 0
@@ -189,14 +193,18 @@ class ROICalculator:
         # Calculate blended metrics
         blended_roi = ((total_revenue - total_budget) / total_budget) * 100 if total_budget > 0 else 0
         
-        # Generate execution priority
-        execution_priority = [
-            f"1. Launch {sorted_channels[0][0].replace('_', ' ')} campaign first (highest ROI: {sorted_channels[0][1]:.1f}%)",
-            f"2. Scale {sorted_channels[1][0].replace('_', ' ')} campaign after week 2",
-            f"3. Add {sorted_channels[2][0].replace('_', ' ')} for channel diversification by week 4",
-            "4. Monitor metrics weekly and reallocate budget based on performance",
-            "5. A/B test within each channel to improve conversion rates"
-        ]
+        # Generate execution priority based on number of channels
+        execution_priority = []
+        if len(sorted_channels) >= 1:
+            execution_priority.append(f"1. Launch {sorted_channels[0][0].replace('_', ' ')} campaign first (highest ROI: {sorted_channels[0][1]:.1f}%)")
+        if len(sorted_channels) >= 2:
+            execution_priority.append(f"2. Scale {sorted_channels[1][0].replace('_', ' ')} campaign after week 2")
+        if len(sorted_channels) >= 3:
+            execution_priority.append(f"3. Add {sorted_channels[2][0].replace('_', ' ')} for channel diversification by week 4")
+        execution_priority.extend([
+            f"{len(sorted_channels) + 1}. Monitor metrics weekly and reallocate budget based on performance",
+            f"{len(sorted_channels) + 2}. A/B test within each channel to improve conversion rates"
+        ])
         
         return {
             'total_budget': total_budget,
@@ -267,12 +275,12 @@ class ROICalculator:
             viral_customers = cumulative_customers * viral_coefficient
             month_customers += viral_customers
             
+            # Update cumulative customers
+            cumulative_customers += month_customers
+            
             # Calculate revenue (Monthly Recurring Revenue model)
             avg_customer_value = self.MONTHLY_SUBSCRIPTION_VALUE
-            month_revenue = cumulative_customers * avg_customer_value  # Existing customers
-            month_revenue += month_customers * avg_customer_value  # New customers
-            
-            cumulative_customers += month_customers
+            month_revenue = cumulative_customers * avg_customer_value
             cumulative_revenue += month_revenue
             cumulative_investment += monthly_budget
             

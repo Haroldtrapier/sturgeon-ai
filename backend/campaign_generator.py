@@ -88,7 +88,10 @@ class CampaignGenerator:
         }
         
         # Get campaign template based on persona
-        campaign = campaigns.get(target_persona, campaigns['bd_director'])
+        if target_persona not in campaigns:
+            # Use bd_director as default but this is the only persona currently supported
+            target_persona = 'bd_director'
+        campaign = campaigns[target_persona]
         
         # Update target count dependent metrics
         campaign['expected_outcomes']['expected_demos_booked'] = int(target_count * self.DEMO_BOOKING_RATE)

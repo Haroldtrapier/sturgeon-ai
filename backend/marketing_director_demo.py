@@ -254,7 +254,7 @@ def main():
     print("  0. Exit")
     
     try:
-        choice = input("\nSelect demo (0-6): ").strip()
+        choice = input(f"\nSelect demo (0-{len(demos)+1}): ").strip()
         
         if choice == "0":
             print("\nExiting...")
