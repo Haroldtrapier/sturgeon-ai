@@ -8,6 +8,11 @@ Calculates campaign ROI, optimizes budget allocation, and projects growth trajec
 class ROICalculator:
     """Marketing ROI calculator with industry benchmarks and projections"""
     
+    # Configuration constants
+    VIRAL_COEFFICIENT = 0.05  # 5% monthly viral growth from existing customer base
+    MONTHLY_SUBSCRIPTION_VALUE = 200  # Monthly subscription value (MRR per customer)
+    ALLOCATION_STRATEGY = [0.50, 0.30, 0.20]  # Budget allocation for top 3 channels
+    
     # Industry benchmarks for different channels
     CHANNEL_BENCHMARKS = {
         'linkedin_ads': {
@@ -64,26 +69,22 @@ class ROICalculator:
         if channel == 'linkedin_ads':
             impressions = (budget / benchmarks['cpm']) * 1000
             clicks = impressions * benchmarks['ctr']
-            leads = clicks * benchmarks['conversion_rate']
-            customers = leads * benchmarks['conversion_rate']
+            customers = clicks * benchmarks['conversion_rate']
             
         elif channel == 'content_marketing':
             total_articles = benchmarks['articles_per_month'] * duration_months
             total_traffic = total_articles * benchmarks['traffic_per_article']
-            leads = total_traffic * benchmarks['conversion_rate']
-            customers = leads * benchmarks['conversion_rate']
+            customers = total_traffic * benchmarks['conversion_rate']
             
         elif channel == 'email_marketing':
             total_sends = benchmarks['sends_per_month'] * duration_months
             opens = total_sends * benchmarks['open_rate']
             clicks = opens * benchmarks['click_rate']
-            leads = clicks * benchmarks['conversion_rate']
-            customers = leads * benchmarks['conversion_rate']
+            customers = clicks * benchmarks['conversion_rate']
             
         elif channel == 'google_ads':
             clicks = budget / benchmarks['cpc']
-            leads = clicks * benchmarks['conversion_rate']
-            customers = leads * benchmarks['conversion_rate']
+            customers = clicks * benchmarks['conversion_rate']
         
         # Calculate revenue and ROI
         total_revenue = customers * benchmarks['avg_customer_value']
@@ -155,9 +156,9 @@ class ROICalculator:
         # Sort channels by ROI
         sorted_channels = sorted(channel_rois.items(), key=lambda x: x[1], reverse=True)
         
-        # Allocate budget proportionally to ROI (with minimum thresholds)
+        # Allocate budget using class-defined strategy
         # Best channel gets 50%, second gets 30%, third gets 20%
-        allocation_percentages = [0.50, 0.30, 0.20]
+        allocation_percentages = self.ALLOCATION_STRATEGY
         
         optimized_allocation = {}
         total_customers = 0
@@ -230,8 +231,8 @@ class ROICalculator:
         cumulative_revenue = 0
         cumulative_investment = 0
         
-        # Assume compounding growth (existing customers generate referrals/word-of-mouth)
-        viral_coefficient = 0.05  # 5% monthly viral growth from existing customer base
+        # Use class-defined viral coefficient for compounding growth
+        viral_coefficient = self.VIRAL_COEFFICIENT
         
         for month in range(1, duration_months + 1):
             month_customers = 0
@@ -247,20 +248,17 @@ class ROICalculator:
                 if channel == 'linkedin_ads':
                     impressions = (channel_budget / benchmarks['cpm']) * 1000
                     clicks = impressions * benchmarks['ctr']
-                    leads = clicks * benchmarks['conversion_rate']
-                    customers = leads * benchmarks['conversion_rate']
+                    customers = clicks * benchmarks['conversion_rate']
                     
                 elif channel == 'content_marketing':
                     traffic = benchmarks['traffic_per_article'] * benchmarks['articles_per_month']
-                    leads = traffic * benchmarks['conversion_rate']
-                    customers = leads * benchmarks['conversion_rate']
+                    customers = traffic * benchmarks['conversion_rate']
                     
                 elif channel == 'email_marketing':
                     sends = benchmarks['sends_per_month']
                     opens = sends * benchmarks['open_rate']
                     clicks = opens * benchmarks['click_rate']
-                    leads = clicks * benchmarks['conversion_rate']
-                    customers = leads * benchmarks['conversion_rate']
+                    customers = clicks * benchmarks['conversion_rate']
                 
                 month_customers += customers
             
@@ -269,7 +267,7 @@ class ROICalculator:
             month_customers += viral_customers
             
             # Calculate revenue (Monthly Recurring Revenue model)
-            avg_customer_value = 200  # Monthly subscription value
+            avg_customer_value = self.MONTHLY_SUBSCRIPTION_VALUE
             month_revenue = cumulative_customers * avg_customer_value  # Existing customers
             month_revenue += month_customers * avg_customer_value  # New customers
             
