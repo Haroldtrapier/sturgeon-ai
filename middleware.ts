@@ -1,70 +1,86 @@
+
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { verifyToken, extractTokenFromCookies } from './lib/auth';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
 
-// Routes that require authentication
-const protectedRoutes = ['/dashboard', '/analytics', '/opportunities', '/proposals', '/payments'];
+export async function middleware(req: NextRequest) {
+  let response = NextResponse.next({
+    request: {
+      headers: req.headers,
+    },
+  });
 
-// Public routes that don't require authentication
-const publicRoutes = ['/login', '/signup', '/forgot-password', '/'];
+  // Get env vars from process.env
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-
-  // Check if route needs protection
-  const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
-  const isPublicRoute = publicRoutes.some(route => pathname === route);
-
-  // Skip middleware for API routes, static files, and public routes
-  if (pathname.startsWith('/api') || pathname.startsWith('/_next') || pathname.startsWith('/static') || isPublicRoute) {
-    return NextResponse.next();
+  // If env vars are missing, skip auth check
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error('Supabase env vars missing in middleware');
+    return response;
   }
 
-  // For protected routes, verify authentication
-  if (isProtectedRoute) {
-    // Try to get token from cookies first
-    const cookieToken = extractTokenFromCookies(request.headers.get('cookie'));
+  try {
+    const supabase = createServerClient(
+      supabaseUrl,
+      supabaseAnonKey,
+      {
+        cookies: {
+          get(name: string) {
+            return req.cookies.get(name)?.value;
+          },
+          set(name: string, value: string, options: CookieOptions) {
+            response.cookies.set({
+              name,
+              value,
+              ...options,
+            });
+          },
+          remove(name: string, options: CookieOptions) {
+            response.cookies.set({
+              name,
+              value: '',
+              ...options,
+            });
+          },
+        },
+      }
+    );
 
-    // Try Authorization header as fallback
-    const authHeader = request.headers.get('authorization');
-    const headerToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
+    // Refresh session if expired
+    const { data: { session } } = await supabase.auth.getSession();
 
-    const token = cookieToken || headerToken;
+    // Define protected routes
+    const protectedRoutes = ['/dashboard', '/profile', '/chat'];
+    const authRoutes = ['/login', '/signup'];
+    const isProtectedRoute = protectedRoutes.some(route => req.nextUrl.pathname.startsWith(route));
+    const isAuthRoute = authRoutes.some(route => req.nextUrl.pathname.startsWith(route));
 
-    // No token found, redirect to login
-    if (!token) {
-      const url = new URL('/login', request.url);
-      url.searchParams.set('redirect', pathname);
-      return NextResponse.redirect(url);
+    // Redirect to login if accessing protected route without session
+    if (isProtectedRoute && !session) {
+      const redirectUrl = new URL('/login', req.url);
+      redirectUrl.searchParams.set('redirect', req.nextUrl.pathname);
+      return NextResponse.redirect(redirectUrl);
     }
 
-    // Verify token
-    const user = verifyToken(token);
-
-    if (!user) {
-      // Invalid token, redirect to login
-      const url = new URL('/login', request.url);
-      url.searchParams.set('redirect', pathname);
-      return NextResponse.redirect(url);
+    // Redirect to dashboard if accessing auth routes with active session
+    if (isAuthRoute && session) {
+      return NextResponse.redirect(new URL('/dashboard', req.url));
     }
 
-    // Token is valid, allow access
-    return NextResponse.next();
+    return response;
+  } catch (error) {
+    console.error('Middleware error:', error);
+    return response;
   }
-
-  // For all other routes, allow access
-  return NextResponse.next();
 }
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    '/dashboard/:path*',
+    '/profile/:path*',
+    '/chat/:path*',
+    '/login',
+    '/signup',
   ],
 };
