@@ -1,49 +1,5 @@
--- Users table
-CREATE TABLE IF NOT EXISTS users (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    email VARCHAR(255) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- Subscriptions table
-CREATE TABLE IF NOT EXISTS subscriptions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    stripe_customer_id VARCHAR(255),
-    stripe_subscription_id VARCHAR(255),
-    status VARCHAR(50) DEFAULT 'inactive',
-    plan_name VARCHAR(100),
-    current_period_start TIMESTAMP WITH TIME ZONE,
-    current_period_end TIMESTAMP WITH TIME ZONE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- Enable Row Level Security
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
-
--- RLS Policies for users
-CREATE POLICY "Users can view own data" ON users
-    FOR SELECT USING (auth.uid() = id);
-
-CREATE POLICY "Users can update own data" ON users
-    FOR UPDATE USING (auth.uid() = id);
-
--- RLS Policies for subscriptions
-CREATE POLICY "Users can view own subscriptions" ON subscriptions
-    FOR SELECT USING (auth.uid() = user_id);
-
--- Indexes for performance
-CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
-CREATE INDEX IF NOT EXISTS idx_subscriptions_user_id ON subscriptions(user_id);
-CREATE INDEX IF NOT EXISTS idx_subscriptions_stripe_customer ON subscriptions(stripe_customer_id);
-
--- ============================================================================
--- ANALYTICS DASHBOARD SCHEMA
--- ============================================================================
+-- Sturgeon AI Analytics Dashboard - Database Schema
+-- Run this in your Supabase SQL Editor
 
 -- Enable necessary extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -65,7 +21,7 @@ CREATE INDEX IF NOT EXISTS idx_analytics_events_user_id ON analytics_events(user
 CREATE INDEX IF NOT EXISTS idx_analytics_events_timestamp ON analytics_events(timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_analytics_events_metadata ON analytics_events USING GIN(metadata);
 
--- Analytics Users Table (Enhanced for Analytics)
+-- Users Table (Enhanced for Analytics)
 CREATE TABLE IF NOT EXISTS analytics_users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email VARCHAR(255) UNIQUE NOT NULL,
@@ -183,7 +139,7 @@ FROM contract_analyses
 GROUP BY DATE(created_at), user_id
 ORDER BY date DESC;
 
--- Enable Row Level Security (RLS) for Analytics Tables
+-- Enable Row Level Security (RLS)
 ALTER TABLE analytics_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE analytics_users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE contract_analyses ENABLE ROW LEVEL SECURITY;
@@ -250,7 +206,6 @@ CREATE TRIGGER update_analytics_users_updated_at BEFORE UPDATE ON analytics_user
 CREATE TRIGGER update_contract_analyses_updated_at BEFORE UPDATE ON contract_analyses
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- Table comments for documentation
 COMMENT ON TABLE analytics_events IS 'Stores all user interaction events for analytics tracking';
 COMMENT ON TABLE analytics_users IS 'Extended user information for analytics dashboard';
 COMMENT ON TABLE contract_analyses IS 'Tracks contract analysis results and metrics';
