@@ -14,11 +14,11 @@ class Settings(BaseSettings):
     database_url: str = "postgresql://postgres:password@localhost:5432/sturgeon"
     
     # JWT Configuration
-    jwt_secret: str = "supersecretkey123changethis"
+    jwt_secret: str
     jwt_algorithm: str = "HS256"
     
     # Admin Authentication
-    admin_bearer_token: str = "admin_secret_token_change_in_production"
+    admin_bearer_token: str
     
     # API Keys
     openai_api_key: Optional[str] = None

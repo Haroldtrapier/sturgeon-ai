@@ -50,7 +50,7 @@ async def verify_admin_token(
     
     # Verify token against configured admin token
     if token != settings.admin_bearer_token:
-        logger.warning("invalid_admin_token", token_prefix=token[:10])
+        logger.warning("invalid_admin_token")
         raise AdminAuthError("Invalid admin token")
     
     logger.info("admin_authenticated")
