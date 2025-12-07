@@ -284,24 +284,24 @@ CHANNEL_STRATEGIES = {
 # Key metrics and targets
 MARKETING_METRICS = {
     "acquisition": {
-        "monthly_new_users": 200,
-        "cac_target": 50,
-        "payback_period_months": 6,
-        "free_to_paid_conversion": 5
+        "monthly_new_users": 200,  # count
+        "cac_target": 50,  # USD
+        "payback_period_months": 6,  # months
+        "free_to_paid_conversion": 5  # percent
     },
     
     "engagement": {
-        "dau_mau_ratio": 0.3,
-        "weekly_active_users": 150,
-        "feature_adoption_rate": 60,
-        "nps_score": 50
+        "dau_mau_ratio": 0.3,  # ratio (0-1)
+        "weekly_active_users": 150,  # count
+        "feature_adoption_rate": 60,  # percent
+        "nps_score": 50  # score (-100 to 100)
     },
     
     "revenue": {
-        "mrr_target": 10000,
-        "arr_target": 120000,
-        "ltv_target": 3000,
-        "churn_rate_max": 5
+        "mrr_target": 10000,  # USD per month
+        "arr_target": 120000,  # USD per year
+        "ltv_target": 3000,  # USD
+        "churn_rate_max": 5  # percent
     }
 }
 

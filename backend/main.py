@@ -44,6 +44,10 @@ class Token(BaseModel):
     access_token: str
     token_type: str
 
+class CampaignBriefRequest(BaseModel):
+    campaign_type: str
+    persona_type: str
+
 # Helper functions
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
@@ -196,20 +200,34 @@ async def get_metrics_by_category(category: str, current_user = Depends(get_curr
 
 @app.post("/marketing/campaign-brief")
 async def generate_campaign_brief(
-    campaign_type: str,
-    persona_type: str,
+    request: CampaignBriefRequest,
     current_user = Depends(get_current_user)
 ):
     """
     Generate a complete campaign brief combining template, persona, and channel strategy
     
-    Example: POST /marketing/campaign-brief?campaign_type=linkedin_outreach&persona_type=bd_director
+    Request body:
+    {
+        "campaign_type": "linkedin_outreach",
+        "persona_type": "bd_director"
+    }
     """
-    try:
-        brief = marketing_director.generate_campaign_brief(campaign_type, persona_type)
-        return brief
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    # Validate campaign type
+    if request.campaign_type not in marketing_director.get_all_campaigns():
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Invalid campaign_type. Must be one of: {', '.join(marketing_director.get_all_campaigns())}"
+        )
+    
+    # Validate persona type
+    if request.persona_type not in marketing_director.get_all_personas():
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid persona_type. Must be one of: {', '.join(marketing_director.get_all_personas())}"
+        )
+    
+    brief = marketing_director.generate_campaign_brief(request.campaign_type, request.persona_type)
+    return brief
 
 @app.get("/marketing/system-prompt")
 async def get_system_prompt(current_user = Depends(get_current_user)):
