@@ -49,6 +49,8 @@ CREATE INDEX IF NOT EXISTS idx_subscriptions_stripe_customer ON subscriptions(st
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Analytics Events Table
+-- Note: 'timestamp' represents the actual event time (can be set by client)
+-- 'created_at' represents when the record was inserted into the database
 CREATE TABLE IF NOT EXISTS analytics_events (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     event_type VARCHAR(50) NOT NULL,
@@ -180,7 +182,7 @@ SELECT
     DATE(created_at) as date,
     COUNT(*) as total_analyses,
     user_id,
-    JSONB_AGG(results->'analysis_score') as scores
+    JSONB_AGG(results->'analysis_score') FILTER (WHERE results->'analysis_score' IS NOT NULL) as scores
 FROM contract_analyses
 GROUP BY DATE(created_at), user_id
 ORDER BY date DESC;

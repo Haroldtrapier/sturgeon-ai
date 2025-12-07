@@ -57,14 +57,22 @@ psql $DATABASE_URL -f database/migrations/create_analytics_schema.sql
 
 For advanced users with direct database access.
 
-```bash
-# Using psql
-psql "postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supabase.co:5432/postgres" \
-  -f database/migrations/create_analytics_schema.sql
+**⚠️ SECURITY WARNING**: Never include passwords directly in commands or scripts. Always use environment variables or secure credential management.
 
-# Or using environment variable
+```bash
+# Recommended: Using environment variable (secure)
 export DATABASE_URL="postgresql://postgres:[PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres"
 psql $DATABASE_URL -f database/migrations/create_analytics_schema.sql
+
+# Or use a .pgpass file for secure credential storage
+# Create ~/.pgpass with: hostname:port:database:username:password
+# Then: chmod 600 ~/.pgpass
+psql -h db.[PROJECT-REF].supabase.co -U postgres -d postgres \
+  -f database/migrations/create_analytics_schema.sql
+
+# NOT RECOMMENDED: Direct password in command (shown for reference only)
+# psql "postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supabase.co:5432/postgres" \
+#   -f database/migrations/create_analytics_schema.sql
 ```
 
 ## Verification Steps
