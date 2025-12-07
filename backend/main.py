@@ -9,8 +9,14 @@ import os
 from typing import Optional
 import stripe
 
+# Import analytics router
+from analytics import analytics_router
+
 # Initialize FastAPI
 app = FastAPI(title="Sturgeon AI API")
+
+# Include analytics router
+app.include_router(analytics_router)
 
 # CORS middleware
 app.add_middleware(
