@@ -9,30 +9,40 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   async function handleSignup() {
     setError("");
+    setLoading(true);
 
-    const { error } = await supabase.auth.signUp({
-      email,
-      password
-    });
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password
+      });
 
-    if (error) {
-      setError(error.message);
-      return;
+      if (error) {
+        setError(error.message);
+        return;
+      }
+
+      router.push("/login");
+    } catch (err: any) {
+      setError(err.message || "An unexpected error occurred");
+    } finally {
+      setLoading(false);
     }
-
-    router.push("/login");
   }
 
   return (
     <div className="auth-container">
       <h2>Create Account</h2>
-      <input placeholder="Email" value={email} onChange={(e)=>setEmail(e.target.value)} />
+      <input type="email" placeholder="Email" value={email} onChange={(e)=>setEmail(e.target.value)} />
       <input type="password" placeholder="Password" value={password} onChange={(e)=>setPassword(e.target.value)} />
       {error && <p className="error">{error}</p>}
-      <button onClick={handleSignup}>Sign Up</button>
+      <button onClick={handleSignup} disabled={loading}>
+        {loading ? "Signing Up..." : "Sign Up"}
+      </button>
       <a href="/login">Already have an account?</a>
     </div>
   );
