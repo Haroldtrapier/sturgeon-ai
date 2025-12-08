@@ -19,6 +19,7 @@ class ROICalculator:
     
     # Constants
     DEFAULT_ROI_PERCENTAGE = 100
+    DEFAULT_LTV_PERIOD_MONTHS = 36  # Assumed customer lifetime period in months
     
     def __init__(self):
         """Initialize the ROI calculator."""
@@ -213,7 +214,7 @@ class ROICalculator:
             'budget': budget,
             'predicted_roi_percentage': round(predicted_roi, 2),
             'predicted_revenue': round(expected_revenue, 2),
-            'predicted_roas': round(expected_revenue / budget, 2) if budget > 0 else 0,
+            'predicted_roas': round(self._safe_divide(expected_revenue, budget), 2),
             'expected_leads': int(expected_leads),
             'expected_customers': int(expected_customers),
             'confidence_intervals': confidence_intervals,
@@ -287,18 +288,19 @@ class ROICalculator:
         total_spend = campaign_data.get('total_spend', 0)
         customers_acquired = customer_data.get('customers_acquired', 0)
         
-        cac = total_spend / customers_acquired if customers_acquired > 0 else 0
+        cac = self._safe_divide(total_spend, customers_acquired)
         avg_order_value = customer_data.get('avg_order_value', 0)
         ltv = customer_data.get('customer_ltv', avg_order_value * 3)  # Default 3x AOV
+        ltv_to_cac = self._safe_divide(ltv, cac)
         
         metrics = {
             'customer_acquisition_cost': round(cac, 2),
             'customer_lifetime_value': round(ltv, 2),
-            'ltv_to_cac_ratio': round(ltv / cac, 2) if cac > 0 else 0,
-            'payback_period_months': round((cac / (ltv / 36)), 1) if ltv > 0 else 0,  # 36 months assumed LTV period
+            'ltv_to_cac_ratio': round(ltv_to_cac, 2),
+            'payback_period_months': round(self._safe_divide(cac, self._safe_divide(ltv, self.DEFAULT_LTV_PERIOD_MONTHS)), 1),
             'customers_acquired': customers_acquired,
             'total_investment': total_spend,
-            'acquisition_efficiency': self._grade_acquisition_efficiency(ltv / cac if cac > 0 else 0),
+            'acquisition_efficiency': self._grade_acquisition_efficiency(ltv_to_cac),
             'break_even_customers': int(total_spend / avg_order_value) if avg_order_value > 0 else 0,
             'profitability_threshold': self._calculate_profitability_threshold(cac, ltv),
             'scaling_potential': self._assess_scaling_potential(cac, ltv, total_spend),
@@ -917,30 +919,32 @@ class ROICalculator:
     
     def _calculate_profitability_threshold(self, cac: float, ltv: float) -> Dict[str, Any]:
         """Calculate profitability threshold."""
+        ltv_cac_ratio = self._safe_divide(ltv, cac)
         return {
             'break_even_ratio': '1:1 (LTV:CAC)',
-            'current_ratio': f"{(ltv/cac if cac > 0 else 0):.1f}:1",
+            'current_ratio': f"{ltv_cac_ratio:.1f}:1",
             'target_ratio': '3:1 or better',
             'status': 'Profitable' if ltv > cac else 'Unprofitable'
         }
     
     def _assess_scaling_potential(self, cac: float, ltv: float, spend: float) -> str:
         """Assess potential for scaling."""
-        if ltv / cac >= 3 if cac > 0 else False:
+        ltv_cac_ratio = self._safe_divide(ltv, cac)
+        if ltv_cac_ratio >= 3:
             return "High - Strong unit economics support scaling"
-        elif ltv / cac >= 2 if cac > 0 else False:
+        elif ltv_cac_ratio >= 2:
             return "Medium - Can scale with optimization"
         else:
             return "Low - Improve efficiency before scaling"
     
     def _compare_to_benchmarks(self, cac: float, ltv: float) -> Dict[str, str]:
         """Compare metrics to industry benchmarks."""
-        benchmarks = self.benchmarks
+        ltv_cac_ratio = self._safe_divide(ltv, cac)
         
         return {
             'cac_vs_benchmark': 'Above average' if cac < 200 else 'Below average',
             'ltv_vs_benchmark': 'Strong' if ltv > 500 else 'Needs improvement',
-            'ratio_vs_benchmark': 'Excellent' if (ltv/cac if cac > 0 else 0) >= 3 else 'Fair'
+            'ratio_vs_benchmark': 'Excellent' if ltv_cac_ratio >= 3 else 'Fair'
         }
     
     def _generate_cac_insights(self, cac: float, ltv: float, data: Dict[str, Any]) -> List[str]:
