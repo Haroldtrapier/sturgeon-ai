@@ -199,6 +199,9 @@ class ROICalculator:
         
         # Normalize scores to get allocation percentages
         total_score = sum(channel_scores.values())
+        if total_score == 0:
+            raise ValueError('No valid channels found or all channels have zero efficiency scores')
+        
         allocations = {
             channel: (score / total_score) 
             for channel, score in channel_scores.items()
@@ -231,11 +234,13 @@ class ROICalculator:
             reverse=True
         )
         
-        execution_priority = [
-            f"1. Start with {sorted_channels[0][0].replace('_', ' ').title()} (highest ROI: {sorted_channels[0][1]['roi']:.1f}%)",
-            f"2. Scale {sorted_channels[1][0].replace('_', ' ').title()} after validating results",
-            f"3. Add {sorted_channels[2][0].replace('_', ' ').title()} for diversification" if len(sorted_channels) > 2 else ""
-        ]
+        execution_priority = []
+        if len(sorted_channels) >= 1:
+            execution_priority.append(f"1. Start with {sorted_channels[0][0].replace('_', ' ').title()} (highest ROI: {sorted_channels[0][1]['roi']:.1f}%)")
+        if len(sorted_channels) >= 2:
+            execution_priority.append(f"2. Scale {sorted_channels[1][0].replace('_', ' ').title()} after validating results")
+        if len(sorted_channels) >= 3:
+            execution_priority.append(f"3. Add {sorted_channels[2][0].replace('_', ' ').title()} for diversification")
         
         weighted_avg_roi = (total_revenue - total_budget) / total_budget * 100 if total_budget > 0 else 0
         
