@@ -24,7 +24,7 @@ export default function ResetPasswordForm() {
     <div className="auth-container">
       <h2>Set New Password</h2>
 
-      <input type="password" placeholder="New password" value={password} onChange={e=>setPassword(e.target.value)} />
+      <input type="password" placeholder="New password" value={password} onChange={e => setPassword(e.target.value)} />
 
       {error && <p className="error">{error}</p>}
 
