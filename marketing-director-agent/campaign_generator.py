@@ -708,7 +708,8 @@ class CampaignGenerator:
     def _should_post(self, channel: str, day: int, frequency: Dict[str, int]) -> bool:
         """Determine if content should be posted on this day."""
         channel_frequency = frequency.get(channel, 3)
-        return day % (7 // channel_frequency) == 0
+        interval = max(1, 7 // min(channel_frequency, 7))
+        return day % interval == 0
     
     def _generate_content_item(self, channel: str, date: datetime, day: int) -> Dict[str, Any]:
         """Generate a content item."""

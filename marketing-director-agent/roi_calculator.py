@@ -17,10 +17,18 @@ class ROICalculator:
     Provides ROI analysis, budget allocation optimization, and performance predictions.
     """
     
+    # Constants
+    DEFAULT_ROI_PERCENTAGE = 100
+    
     def __init__(self):
         """Initialize the ROI calculator."""
         self.calculations = []
         self.benchmarks = self._load_industry_benchmarks()
+    
+    @staticmethod
+    def _safe_divide(numerator: float, denominator: float, default: float = 0) -> float:
+        """Safely perform division, returning default if denominator is zero."""
+        return numerator / denominator if denominator != 0 else default
     
     def calculate_campaign_roi(self,
                               campaign_data: Dict[str, Any],
@@ -45,12 +53,12 @@ class ROICalculator:
         # Calculate additional metrics
         leads_generated = results_data.get('leads', 0)
         customers_acquired = results_data.get('customers', 0)
-        cost_per_lead = total_investment / leads_generated if leads_generated > 0 else 0
-        cost_per_acquisition = total_investment / customers_acquired if customers_acquired > 0 else 0
+        cost_per_lead = self._safe_divide(total_investment, leads_generated)
+        cost_per_acquisition = self._safe_divide(total_investment, customers_acquired)
         
         # Calculate customer lifetime value impact
         avg_customer_value = results_data.get('avg_customer_value', 0)
-        ltv_to_cac_ratio = avg_customer_value / cost_per_acquisition if cost_per_acquisition > 0 else 0
+        ltv_to_cac_ratio = self._safe_divide(avg_customer_value, cost_per_acquisition)
         
         analysis = {
             'campaign_id': campaign_data.get('id', 'unknown'),
@@ -96,8 +104,8 @@ class ROICalculator:
                 'revenue': revenue,
                 'roi_percentage': self._calculate_roi_percentage(revenue, investment),
                 'roas': self._calculate_roas(revenue, investment),
-                'cost_per_lead': data.get('spend', 0) / data.get('leads', 1),
-                'conversion_rate': data.get('conversions', 0) / data.get('clicks', 1) if data.get('clicks', 0) > 0 else 0,
+                'cost_per_lead': self._safe_divide(data.get('spend', 0), data.get('leads', 1)),
+                'conversion_rate': self._safe_divide(data.get('conversions', 0), data.get('clicks', 1)),
                 'performance_tier': self._classify_channel_performance(
                     self._calculate_roi_percentage(revenue, investment)
                 )
@@ -387,15 +395,11 @@ class ROICalculator:
     
     def _calculate_roi_percentage(self, revenue: float, investment: float) -> float:
         """Calculate ROI percentage."""
-        if investment == 0:
-            return 0
-        return ((revenue - investment) / investment) * 100
+        return self._safe_divide((revenue - investment), investment, 0) * 100
     
     def _calculate_roas(self, revenue: float, spend: float) -> float:
         """Calculate Return on Ad Spend."""
-        if spend == 0:
-            return 0
-        return revenue / spend
+        return self._safe_divide(revenue, spend)
     
     def _grade_performance(self, roi: float, ltv_cac_ratio: float) -> str:
         """Grade overall campaign performance."""
