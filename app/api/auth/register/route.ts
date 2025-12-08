@@ -1,77 +1,32 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { NextResponse } from 'next/server';
+import { supabaseClient } from '@/lib/supabaseClient';
 
-// Enable CORS
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-};
-
-export async function OPTIONS() {
-  return NextResponse.json({}, { headers: corsHeaders });
-}
-
-export async function POST(request: NextRequest) {
+export async function POST(req: Request) {
   try {
-    // Parse request body
-    const body = await request.json();
-    const { email, password } = body;
+    const { email, password } = await req.json();
 
-    // Validate input
     if (!email || !password) {
-      return NextResponse.json(
-        { error: 'Email and password are required' },
-        { status: 400, headers: corsHeaders }
-      );
+      return NextResponse.json({ error: 'Email and password are required.' }, { status: 400 });
     }
 
-    // Check environment variables
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-    if (!supabaseUrl || !supabaseAnonKey) {
-      console.error('Missing Supabase environment variables');
-      return NextResponse.json(
-        { error: 'Server configuration error. Please contact support.' },
-        { status: 500, headers: corsHeaders }
-      );
-    }
-
-    // Create Supabase client
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-    // Sign up user
-    const { data, error } = await supabase.auth.signUp({
+    const { data, error } = await supabaseClient.auth.signUp({
       email,
       password,
+      options: {
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_BASE_URL ?? ''}/auth/callback`,
+      },
     });
 
     if (error) {
-      console.error('Supabase sign up error:', error);
-      return NextResponse.json(
-        { error: error.message },
-        { status: 400, headers: corsHeaders }
-      );
+      return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    // Return success
     return NextResponse.json(
-      { 
-        success: true,
-        message: 'Registration successful! Please check your email to confirm your account.',
-        user: {
-          id: data.user?.id,
-          email: data.user?.email,
-        }
-      },
-      { status: 201, headers: corsHeaders }
+      { message: 'Registration successful. Please check your email to confirm.', user: data.user },
+      { status: 200 }
     );
-  } catch (error: any) {
-    console.error('Registration error:', error);
-    return NextResponse.json(
-      { error: error.message || 'An unexpected error occurred' },
-      { status: 500, headers: corsHeaders }
-    );
+  } catch (err) {
+    console.error('Register error', err);
+    return NextResponse.json({ error: 'Unexpected error during registration.' }, { status: 500 });
   }
 }
