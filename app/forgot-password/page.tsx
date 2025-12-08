@@ -16,8 +16,9 @@ export default function ForgotPasswordPage() {
     setLoading(true);
 
     try {
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/reset-password`,
+        redirectTo: `${siteUrl}/reset-password`,
       });
 
       if (error) {
@@ -25,8 +26,8 @@ export default function ForgotPasswordPage() {
       } else {
         setSuccess('If an account exists, a reset link has been sent to your email.');
       }
-    } catch (err: any) {
-      setError(err?.message ?? 'Unexpected error');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Unexpected error');
     } finally {
       setLoading(false);
     }
