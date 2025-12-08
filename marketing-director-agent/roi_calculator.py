@@ -354,8 +354,8 @@ class ROICalculator:
             'best_roi_campaign': best_roi,
             'worst_roi_campaign': worst_roi,
             'best_roas_campaign': best_roas,
-            'average_roi': round(sum(c['roi'] for c in campaign_metrics) / len(campaign_metrics), 2),
-            'average_roas': round(sum(c['roas'] for c in campaign_metrics) / len(campaign_metrics), 2),
+            'average_roi': round(self._safe_divide(sum(c['roi'] for c in campaign_metrics), len(campaign_metrics)), 2),
+            'average_roas': round(self._safe_divide(sum(c['roas'] for c in campaign_metrics), len(campaign_metrics)), 2),
             'performance_spread': round(best_roi['roi'] - worst_roi['roi'], 2),
             'insights': self._generate_comparison_insights(campaign_metrics),
             'recommendations': self._generate_comparison_recommendations(campaign_metrics),
@@ -820,18 +820,13 @@ class ROICalculator:
         """Calculate efficiency score for a channel."""
         # Simple efficiency score based on results vs spend
         revenue = results.get('revenue', {}).get(channel, 0)
-        if spend == 0:
-            return 0
-        
-        efficiency = (revenue / spend) * 100
+        efficiency = self._safe_divide(revenue, spend) * 100
         return round(min(efficiency, 100), 1)  # Cap at 100
     
     def _calculate_overall_efficiency(self, metrics: Dict[str, Any]) -> float:
         """Calculate overall budget efficiency."""
         scores = [data['efficiency_score'] for data in metrics.values()]
-        if not scores:
-            return 0
-        return round(sum(scores) / len(scores), 1)
+        return round(self._safe_divide(sum(scores), len(scores)), 1)
     
     def _assess_budget_discipline(self, actual: Dict[str, float], planned: Dict[str, float]) -> str:
         """Assess budget discipline."""
@@ -855,8 +850,8 @@ class ROICalculator:
         
         return {
             'total_spend': round(total, 2),
-            'distribution': {ch: round((amt/total*100), 1) for ch, amt in spend.items()},
-            'concentration': 'Balanced' if max(spend.values()) / total < 0.4 else 'Concentrated'
+            'distribution': {ch: round(self._safe_divide(amt * 100, total), 1) for ch, amt in spend.items()},
+            'concentration': 'Balanced' if self._safe_divide(max(spend.values()) if spend else 0, total) < 0.4 else 'Concentrated'
         }
     
     def _identify_waste(self, metrics: Dict[str, Any], results: Dict[str, Any]) -> List[Dict[str, str]]:

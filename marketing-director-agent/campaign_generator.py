@@ -45,6 +45,11 @@ class CampaignGenerator:
         self.campaigns = []
         self.templates = self._load_campaign_templates()
     
+    @staticmethod
+    def _safe_divide(numerator: float, denominator: float, default: float = 0) -> float:
+        """Safely perform division, returning default if denominator is zero."""
+        return numerator / denominator if denominator != 0 else default
+    
     def generate_campaign(self,
                          campaign_name: str,
                          objective: str,
@@ -402,7 +407,7 @@ class CampaignGenerator:
         selected_channels_total = sum(base_allocation.get(ch, 0.10) for ch in channels)
         
         for channel in channels:
-            percentage = base_allocation.get(channel, 0.10) / selected_channels_total
+            percentage = self._safe_divide(base_allocation.get(channel, 0.10), selected_channels_total, 1.0/len(channels) if channels else 0)
             allocation[channel] = round(total_budget * percentage, 2)
         
         return allocation
