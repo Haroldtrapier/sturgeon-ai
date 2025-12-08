@@ -1,72 +1,82 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { APIClient } from '@/lib/api';
+import { FormEvent, useState } from 'react';
 
 export default function SignupPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const router = useRouter();
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
+    setMessage(null);
+    setError(null);
 
-    try {
-      await APIClient.register(email, password);
-      router.push('/login');
-    } catch (err: any) {
-      setError(err.message || 'Registration failed');
-    } finally {
-      setLoading(false);
+    const formData = new FormData(e.currentTarget);
+    const email = String(formData.get('email') || '');
+    const password = String(formData.get('password') || '');
+
+    const res = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      setError(data.error || 'Registration failed');
+    } else {
+      setMessage(data.message || 'Registration successful');
     }
+
+    setLoading(false);
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow">
-        <h2 className="text-3xl font-bold text-center mb-6">Create Account</h2>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium mb-2">Email</label>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Password</label>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w2full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          {error && <p className="text-red-500 text-sm">{error}</p>}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400"
-          >
-            {loading ? 'Creating Account...' : 'Sign Up'}
-          </button>
-        </form>
-        <p className="text-sm text-center mt-4">
-          Already have an account? {' '}
-          <a href="/login" className="text-blue-600 hover:underline">
-            Log in
-          </a>
+    <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <form
+        onSubmit={handleSubmit}
+        className="w-full max-w-md bg-white shadow-md rounded-lg p-8 space-y-4"
+      >
+        <h1 className="text-2xl font-semibold text-slate-900">Create your Sturgeon AI account</h1>
+
+        {error && <p className="text-sm text-red-600">{error}</p>}
+        {message && <p className="text-sm text-emerald-600">{message}</p>}
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700">Email</label>
+          <input
+            name="email"
+            type="email"
+            required
+            className="mt-1 w-full border rounded-md px-3 py-2 text-sm"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700">Password</label>
+          <input
+            name="password"
+            type="password"
+            required
+            className="mt-1 w-full border rounded-md px-3 py-2 text-sm"
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full bg-blue-600 text-white py-2 rounded-md text-sm font-medium disabled:opacity-70"
+        >
+          {loading ? 'Creating account…' : 'Sign Up'}
+        </button>
+
+        <p className="text-xs text-slate-500 text-center">
+          Already have an account? <a href="/login" className="text-blue-600 underline">Log in</a>
         </p>
-      </div>
+      </form>
     </div>
   );
 }
