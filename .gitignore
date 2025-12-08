@@ -21,6 +21,9 @@ wheels/
 *.egg
 MANIFEST
 
+# TypeScript/Next.js lib directory (exception to Python lib/)
+!/lib/
+
 # Virtual Environment
 venv/
 ENV/
@@ -58,6 +61,7 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+package-lock.json
 
 # Build
 dist/
@@ -65,3 +69,7 @@ build/
 
 # Docker
 docker-compose.override.yml
+
+# Next.js
+.next/
+next-env.d.ts

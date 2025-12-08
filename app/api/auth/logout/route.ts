@@ -1,13 +1,15 @@
 import { NextResponse } from 'next/server';
-import { clearAuthCookies, createSuccessResponse } from '@/lib/api';
+import { supabaseClient } from '@/lib/supabaseClient';
 
-export async function POST(request: Request) {
-  const response = NextResponse.json(
-    createSuccessResponse({ message: 'Logged out successfully' }, 'Logout successful')
-  );
-
-  // Clear auth cookies
-  clearAuthCookies(response);
-
-  return response;
+export async function POST() {
+  try {
+    const { error } = await supabaseClient.auth.signOut();
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+    return NextResponse.json({ message: 'Logged out' }, { status: 200 });
+  } catch (err) {
+    console.error('Logout error', err);
+    return NextResponse.json({ error: 'Unexpected error during logout.' }, { status: 500 });
+  }
 }
