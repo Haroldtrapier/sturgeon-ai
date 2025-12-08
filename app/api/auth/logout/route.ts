@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase';
 import { clearAuthCookies, createSuccessResponse } from '@/lib/api';
 
 // Enable CORS
@@ -15,23 +15,14 @@ export async function OPTIONS() {
 
 export async function POST(request: Request) {
   try {
-    // Check environment variables
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    // Sign out from Supabase with global scope to clear all sessions
+    const { error } = await supabase.auth.signOut({ scope: 'global' });
 
-    if (!supabaseUrl || !supabaseAnonKey) {
-      console.error('Missing Supabase environment variables');
-      return NextResponse.json(
-        { error: 'Server configuration error. Please contact support.' },
-        { status: 500, headers: corsHeaders }
-      );
+    if (error) {
+      console.error('Supabase sign out error:', error);
+      // Continue with logout process even if Supabase signout fails
+      // to ensure user can still clear local auth state
     }
-
-    // Create Supabase client
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-    // Sign out from Supabase
-    await supabase.auth.signOut();
 
     // Create response
     const response = NextResponse.json(
