@@ -22,6 +22,12 @@ class CampaignMetrics:
 class ROICalculator:
     """Calculate and optimize marketing ROI"""
     
+    # Conversion rate constants
+    DEMO_BOOKING_RATE = 0.30  # 30% of leads book demos
+    DEMO_CONVERSION_RATE = 0.25  # 25% of demos convert to customers
+    CUSTOMER_LIFETIME_YEARS = 2.5  # Average customer lifetime in years
+    MONTHLY_SUBSCRIPTION_PRICE = 199  # Monthly subscription price in USD
+    
     def __init__(self):
         # Industry benchmarks
         self.benchmarks = {
@@ -79,8 +85,8 @@ class ROICalculator:
             # Paid advertising channels
             clicks = int(budget / bench["cpc"])
             leads = int(clicks * bench["conversion_rate"])
-            demos = int(leads * 0.30)  # 30% of leads book demos
-            customers = int(demos * 0.25)  # 25% of demos convert
+            demos = int(leads * self.DEMO_BOOKING_RATE)
+            customers = int(demos * self.DEMO_CONVERSION_RATE)
             revenue = customers * bench["avg_deal_size"]
             
         elif channel == "content_marketing":
@@ -88,8 +94,8 @@ class ROICalculator:
             articles = int(budget / bench["cost_per_article"])
             traffic = articles * bench["traffic_per_article"]
             leads = int(traffic * bench["conversion_rate"])
-            demos = int(leads * 0.30)
-            customers = int(demos * 0.25)
+            demos = int(leads * self.DEMO_BOOKING_RATE)
+            customers = int(demos * self.DEMO_CONVERSION_RATE)
             revenue = customers * bench["avg_deal_size"]
             clicks = traffic
             
@@ -99,13 +105,13 @@ class ROICalculator:
             opens = int(sends * bench["open_rate"])
             clicks = int(opens * bench["click_rate"])
             leads = int(clicks * bench["conversion_rate"])
-            demos = int(leads * 0.30)
-            customers = int(demos * 0.25)
+            demos = int(leads * self.DEMO_BOOKING_RATE)
+            customers = int(demos * self.DEMO_CONVERSION_RATE)
             revenue = customers * bench["avg_deal_size"]
         
         # Calculate ROI metrics
         cac = budget / customers if customers > 0 else 0
-        ltv = bench["avg_deal_size"] * 2.5  # Assuming 2.5 year avg customer lifetime
+        ltv = bench["avg_deal_size"] * self.CUSTOMER_LIFETIME_YEARS
         roi = ((revenue - budget) / budget * 100) if budget > 0 else 0
         roas = revenue / budget if budget > 0 else 0
         payback_months = cac / (bench["avg_deal_size"] / 12) if customers > 0 else 0
@@ -294,7 +300,7 @@ class ROICalculator:
                 month_results["revenue"] += analysis["performance"]["revenue_generated"]
             
             # Add compound effect (previous customers still paying)
-            month_results["mrr"] = (cumulative_customers + month_results["customers"]) * 199
+            month_results["mrr"] = (cumulative_customers + month_results["customers"]) * self.MONTHLY_SUBSCRIPTION_PRICE
             cumulative_customers += month_results["customers"]
             cumulative_revenue += month_results["revenue"]
             
