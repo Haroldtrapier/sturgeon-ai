@@ -104,8 +104,8 @@ class ROICalculator:
                 'revenue': revenue,
                 'roi_percentage': self._calculate_roi_percentage(revenue, investment),
                 'roas': self._calculate_roas(revenue, investment),
-                'cost_per_lead': self._safe_divide(data.get('spend', 0), data.get('leads', 1)),
-                'conversion_rate': self._safe_divide(data.get('conversions', 0), data.get('clicks', 1)),
+                'cost_per_lead': self._safe_divide(data.get('spend', 0), data.get('leads', 0)),
+                'conversion_rate': self._safe_divide(data.get('conversions', 0), data.get('clicks', 0)),
                 'performance_tier': self._classify_channel_performance(
                     self._calculate_roi_percentage(revenue, investment)
                 )
@@ -247,7 +247,7 @@ class ROICalculator:
             planned = planned_budget.get(channel, 0)
             actual = actual_spend.get(channel, 0)
             variance = actual - planned
-            variance_percentage = (variance / planned * 100) if planned > 0 else 0
+            variance_percentage = self._safe_divide(variance * 100, planned)
             
             efficiency_metrics[channel] = {
                 'planned': planned,
@@ -330,14 +330,14 @@ class ROICalculator:
                 'name': campaign.get('name', 'Unknown'),
                 'roi': self._calculate_roi_percentage(
                     campaign.get('revenue', 0),
-                    campaign.get('spend', 1)
+                    campaign.get('spend', 0)
                 ),
                 'roas': self._calculate_roas(
                     campaign.get('revenue', 0),
-                    campaign.get('spend', 1)
+                    campaign.get('spend', 0)
                 ),
-                'cpl': campaign.get('spend', 0) / campaign.get('leads', 1),
-                'conversion_rate': campaign.get('conversions', 0) / campaign.get('leads', 1) if campaign.get('leads', 0) > 0 else 0
+                'cpl': self._safe_divide(campaign.get('spend', 0), campaign.get('leads', 0)),
+                'conversion_rate': self._safe_divide(campaign.get('conversions', 0), campaign.get('leads', 0))
             }
             campaign_metrics.append(metrics)
         

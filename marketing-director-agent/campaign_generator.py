@@ -707,7 +707,7 @@ class CampaignGenerator:
     
     def _should_post(self, channel: str, day: int, frequency: Dict[str, int]) -> bool:
         """Determine if content should be posted on this day."""
-        channel_frequency = frequency.get(channel, 3)
+        channel_frequency = max(1, frequency.get(channel, 3))  # Ensure at least 1
         interval = max(1, 7 // min(channel_frequency, 7))
         return day % interval == 0
     
