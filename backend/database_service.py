@@ -8,8 +8,12 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 from config import settings
 import structlog
+import random
 
 logger = structlog.get_logger()
+
+# Constants
+MAX_SEARCH_EVENTS_TO_ANALYZE = 1000  # Limit for search term analysis to prevent memory issues
 
 
 class SupabaseService:
@@ -90,6 +94,8 @@ class SupabaseService:
             )
             
             # Count unique user_ids
+            # Note: This processes events in memory. For large datasets, consider using
+            # a database view or stored procedure with COUNT(DISTINCT user_id)
             unique_users = len(set(event["user_id"] for event in result.data if event.get("user_id")))
             return unique_users
             
@@ -160,7 +166,7 @@ class SupabaseService:
                 self.client.table("analytics_events")
                 .select("metadata")
                 .eq("event_type", "search")
-                .limit(1000)
+                .limit(MAX_SEARCH_EVENTS_TO_ANALYZE)
                 .execute()
             )
             
@@ -240,8 +246,8 @@ class SupabaseService:
                 }
             )
             
-            # Simulate contract analysis (replace with actual AI analysis)
-            import random
+            # TODO: Replace with actual AI analysis integration (e.g., OpenAI, custom ML model)
+            # This is currently mock data for demonstration purposes
             analysis_score = random.uniform(0.6, 0.95)
             
             risk_factors = [

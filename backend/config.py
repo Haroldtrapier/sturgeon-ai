@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     database_url: str = os.getenv("DATABASE_URL", "")
     
     # JWT Configuration
+    # WARNING: Change the default JWT_SECRET in production!
     jwt_secret: str = os.getenv("JWT_SECRET", "supersecretkey123changethis")
     jwt_algorithm: str = "HS256"
     jwt_expiration_hours: int = 24
