@@ -1,7 +1,7 @@
 import { type NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
-import { supabase } from "@/lib/supabase";
+import { supabaseClient as supabase } from "@/lib/supabaseClient";
 import { comparePassword } from "@/lib/auth";
 
 export const authOptions: NextAuthOptions = {

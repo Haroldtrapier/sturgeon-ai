@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { supabaseClient as supabase } from '@/lib/supabaseClient';
 
 // Enable CORS
 const corsHeaders = {
@@ -25,21 +25,6 @@ export async function POST(request: NextRequest) {
         { status: 400, headers: corsHeaders }
       );
     }
-
-    // Check environment variables
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-    if (!supabaseUrl || !supabaseAnonKey) {
-      console.error('Missing Supabase environment variables');
-      return NextResponse.json(
-        { error: 'Server configuration error. Please contact support.' },
-        { status: 500, headers: corsHeaders }
-      );
-    }
-
-    // Create Supabase client
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
     // Sign in user
     const { data, error } = await supabase.auth.signInWithPassword({
