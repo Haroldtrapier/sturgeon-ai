@@ -16,16 +16,16 @@ export const createServerSupabaseClient = () => {
           try {
             cookieStore.set({ name, value, ...options });
           } catch (error) {
-            // Cookie setting can fail in certain contexts (e.g., after response headers are sent)
-            // This is expected behavior in some server-side scenarios
+            // Cookie setting can fail in Server Components after headers are sent,
+            // or in middleware after the response has started. This is expected.
           }
         },
         remove(name: string, options: CookieOptions) {
           try {
             cookieStore.set({ name, value: '', ...options, maxAge: 0 });
           } catch (error) {
-            // Cookie removal can fail in certain contexts
-            // This is expected behavior in some server-side scenarios
+            // Cookie removal can fail in Server Components after headers are sent,
+            // or in middleware after the response has started. This is expected.
           }
         },
       },
