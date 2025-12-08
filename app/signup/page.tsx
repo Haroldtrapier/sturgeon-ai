@@ -24,7 +24,12 @@ export default function SignupPage() {
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error('Invalid server response');
+      }
 
       if (!res.ok) {
         setError(data.error || 'Registration failed');
@@ -50,8 +55,9 @@ export default function SignupPage() {
         {message && <p className="text-sm text-emerald-600">{message}</p>}
 
         <div>
-          <label className="block text-sm font-medium text-slate-700">Email</label>
+          <label htmlFor="email" className="block text-sm font-medium text-slate-700">Email</label>
           <input
+            id="email"
             name="email"
             type="email"
             required
@@ -60,8 +66,9 @@ export default function SignupPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700">Password</label>
+          <label htmlFor="password" className="block text-sm font-medium text-slate-700">Password</label>
           <input
+            id="password"
             name="password"
             type="password"
             required
