@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -30,14 +31,14 @@ export default function LoginPage() {
     <div className="auth-container">
       <h2>Sturgeon AI – Sign In</h2>
 
-      <input placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} />
+      <input type="email" placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} />
       <input type="password" placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)} />
 
       {error && <p className="error">{error}</p>}
 
       <button onClick={handleLogin}>Sign In</button>
-      <a href="/forgot-password">Forgot password?</a>
-      <a href="/signup">Create account</a>
+      <Link href="/forgot-password">Forgot password?</Link>
+      <Link href="/signup">Create account</Link>
     </div>
   );
 }
