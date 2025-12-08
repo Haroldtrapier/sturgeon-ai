@@ -8,6 +8,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Optional
 from config import settings
 import structlog
+import secrets
 
 logger = structlog.get_logger()
 
@@ -42,15 +43,18 @@ async def verify_admin_token(
     
     # Extract token from "Bearer <token>" format
     try:
-        scheme, token = authorization.split()
+        parts = authorization.split(' ', 1)
+        if len(parts) != 2:
+            raise AdminAuthError("Invalid authorization header format")
+        scheme, token = parts
         if scheme.lower() != "bearer":
             raise AdminAuthError("Invalid authentication scheme")
     except ValueError:
         raise AdminAuthError("Invalid authorization header format")
     
-    # Verify token against configured admin token
-    if token != settings.admin_bearer_token:
-        logger.warning("invalid_admin_token", token_prefix=token[:10])
+    # Verify token against configured admin token using constant-time comparison
+    if not secrets.compare_digest(token, settings.admin_bearer_token):
+        logger.warning("invalid_admin_token")
         raise AdminAuthError("Invalid admin token")
     
     logger.info("admin_authenticated")
@@ -74,7 +78,8 @@ async def get_current_admin(
     """
     token = credentials.credentials
     
-    if token != settings.admin_bearer_token:
+    # Use constant-time comparison to prevent timing attacks
+    if not secrets.compare_digest(token, settings.admin_bearer_token):
         logger.warning("invalid_admin_credentials")
         raise AdminAuthError("Invalid admin credentials")
     
@@ -91,4 +96,5 @@ def check_admin_access(token: str) -> bool:
     Returns:
         bool: True if token is valid, False otherwise
     """
-    return token == settings.admin_bearer_token
+    # Use constant-time comparison to prevent timing attacks
+    return secrets.compare_digest(token, settings.admin_bearer_token)
