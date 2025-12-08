@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 import os
 from typing import Optional
 import stripe
+from analytics_routes import analytics_router
 
 # Initialize FastAPI
 app = FastAPI(title="Sturgeon AI API")
@@ -20,6 +21,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include routers
+app.include_router(analytics_router)
 
 # Security
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
