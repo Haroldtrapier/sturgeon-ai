@@ -28,6 +28,11 @@ OPENAI_API_KEY=your_key
 SAM_GOV_API_KEY=your_key
 GRANTS_GOV_API_KEY=your_key
 DATABASE_URL=your_supabase_url
+SUPABASE_URL=your_supabase_project_url
+SUPABASE_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_KEY=your_supabase_service_key
+ADMIN_SECRET_KEY=your_admin_secret
+ADMIN_BEARER_TOKEN=your_admin_bearer_token
 ```
 
 ### 3. Connect Frontend to Backend
