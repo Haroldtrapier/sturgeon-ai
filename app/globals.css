@@ -9,3 +9,31 @@
     --primary: 221.2 83.2% 53.3%;
   }
 }
+
+@layer components {
+  .auth-container {
+    @apply min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50 p-4;
+  }
+  
+  .auth-container > div {
+    @apply bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md;
+  }
+  
+  .auth-container h2 {
+    @apply text-2xl font-bold text-gray-800 mb-6 text-center;
+  }
+  
+  .auth-container input[type="password"],
+  .auth-container input[type="email"],
+  .auth-container input[type="text"] {
+    @apply w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500;
+  }
+  
+  .auth-container button {
+    @apply w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  
+  .auth-container .error {
+    @apply bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4 text-sm;
+  }
+}
