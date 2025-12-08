@@ -36,8 +36,8 @@ def calculate_campaign_roi(channel: str, budget: float) -> Dict[str, Any]:
     conversion_rate = metrics["conversion_rate"]
     customer_value = metrics["average_customer_value"]
     
-    # Calculate expected customers based on conversion rate
-    # customers = budget * conversion_rate
+    # Calculate expected customers based on budget and conversion rate
+    # Note: Customers are rounded down to nearest integer
     expected_customers = int(budget * conversion_rate)
     
     # Calculate expected revenue

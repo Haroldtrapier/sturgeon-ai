@@ -32,7 +32,12 @@ class TestCalculateCampaignROI:
         assert roi["roi"] == 759.7
     
     def test_linkedin_ads_small_budget(self):
-        """Test LinkedIn ads with small budget."""
+        """Test LinkedIn ads with small budget.
+        
+        Note: ROI varies from larger budgets due to integer rounding of customer count.
+        With exact calculation (3.6 customers), ROI would be 759.7%, but with 
+        integer rounding (3 customers), ROI is 616.4%.
+        """
         roi = roi_calc.calculate_campaign_roi(
             channel="linkedin_ads",
             budget=1000
