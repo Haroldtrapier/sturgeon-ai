@@ -114,7 +114,7 @@ class CampaignGenerator:
                     "sequence_number": 5,
                     "subject": None,
                     "content": "Hi {first_name}, I don't want to be a pest, but I genuinely believe there's value here for {company}. "
-                              "If timing isn't right now, totally understand. Would it make sense to reconnect in Q1 2025? "
+                              "If timing isn't right now, totally understand. Would it make sense to reconnect next quarter? "
                               "Either way, happy to share our free industry benchmark report on government contracting trends.",
                     "wait_days": 7,
                     "message_type": "final_touchpoint"

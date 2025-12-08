@@ -96,7 +96,7 @@ class ROICalculator:
         num_leads = budget / metrics["cost_per_lead"]
         
         # Calculate expected customers
-        expected_customers = int(num_leads * metrics["lead_to_customer_rate"])
+        expected_customers = round(num_leads * metrics["lead_to_customer_rate"])
         
         # Calculate expected revenue (using lifetime value)
         customer_lifetime_value = metrics["avg_customer_value"] * metrics["ltv_multiplier"]
