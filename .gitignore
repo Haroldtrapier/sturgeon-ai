@@ -39,6 +39,7 @@ env/
 *.swo
 *~
 .DS_Store
+.eslintrc.json
 
 # Testing
 .pytest_cache/
@@ -58,6 +59,12 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+package-lock.json
+
+# Next.js
+.next/
+next-env.d.ts
+out/
 
 # Build
 dist/
