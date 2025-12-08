@@ -20,6 +20,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Email is required.' }, { status: 400, headers: corsHeaders });
     }
 
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return NextResponse.json({ error: 'Invalid email format.' }, { status: 400, headers: corsHeaders });
+    }
+
     const redirectUrl =
       process.env.NEXT_PUBLIC_RESET_REDIRECT_URL ??
       `${process.env.NEXT_PUBLIC_BASE_URL ?? ''}/reset-password`;
