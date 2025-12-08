@@ -65,10 +65,10 @@ export async function POST(request: NextRequest) {
       },
       { status: 200, headers: corsHeaders }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Password reset error:', error);
     return NextResponse.json(
-      { error: error.message || 'An unexpected error occurred' },
+      { error: 'An unexpected error occurred' },
       { status: 500, headers: corsHeaders }
     );
   }
