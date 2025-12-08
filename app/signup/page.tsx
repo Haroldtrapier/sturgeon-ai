@@ -37,7 +37,11 @@ export default function SignupPage() {
         setMessage(data.message || 'Registration successful');
       }
     } catch (err) {
-      setError('An unexpected error occurred. Please try again.');
+      if (err instanceof Error && err.message === 'Invalid server response') {
+        setError('Invalid server response. Please try again later.');
+      } else {
+        setError('Network error. Please check your connection and try again.');
+      }
     } finally {
       setLoading(false);
     }
