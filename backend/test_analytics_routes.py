@@ -7,10 +7,25 @@ from fastapi.testclient import TestClient
 from datetime import datetime
 import os
 
-# Set admin token for tests
-os.environ["ADMIN_TOKEN"] = "test_admin_token_12345"
 
-from main import app
+@pytest.fixture(scope="session", autouse=True)
+def setup_test_environment():
+    """Set up test environment variables before importing modules"""
+    os.environ["ADMIN_TOKEN"] = "test_admin_token_12345"
+    yield
+    # Cleanup after tests
+    os.environ.pop("ADMIN_TOKEN", None)
+
+
+@pytest.fixture
+def client():
+    """Create a test client for the FastAPI app"""
+    # Import here to ensure environment variables are set first
+    from main import app
+    return TestClient(app)
+
+
+# Import models after environment setup
 from models import (
     HealthResponse,
     MetricsResponse,
@@ -19,13 +34,11 @@ from models import (
     AnalyticsEventRequest
 )
 
-client = TestClient(app)
-
 
 class TestHealthEndpoints:
     """Test health and status endpoints"""
     
-    def test_health_check_no_auth(self):
+    def test_health_check_no_auth(self, client):
         """Health check should work without authentication"""
         response = client.get("/api/analytics/health")
         assert response.status_code == 200
@@ -37,12 +50,12 @@ class TestHealthEndpoints:
         assert "database_connected" in data
         assert "services" in data
     
-    def test_status_requires_auth(self):
+    def test_status_requires_auth(self, client):
         """Status endpoint should require admin authentication"""
         response = client.get("/api/analytics/status")
         assert response.status_code == 401
     
-    def test_status_with_valid_auth(self):
+    def test_status_with_valid_auth(self, client):
         """Status endpoint should work with valid admin token"""
         response = client.get(
             "/api/analytics/status",
@@ -57,7 +70,7 @@ class TestHealthEndpoints:
         assert "api" in data
         assert "analytics" in data
     
-    def test_status_with_invalid_auth(self):
+    def test_status_with_invalid_auth(self, client):
         """Status endpoint should reject invalid tokens"""
         response = client.get(
             "/api/analytics/status",
@@ -69,12 +82,12 @@ class TestHealthEndpoints:
 class TestMetricsEndpoints:
     """Test analytics metrics endpoints"""
     
-    def test_metrics_requires_auth(self):
+    def test_metrics_requires_auth(self, client):
         """Metrics endpoint should require authentication"""
         response = client.get("/api/analytics/metrics")
         assert response.status_code == 401
     
-    def test_metrics_with_valid_auth(self):
+    def test_metrics_with_valid_auth(self, client):
         """Metrics endpoint should return comprehensive data"""
         response = client.get(
             "/api/analytics/metrics",
@@ -96,7 +109,7 @@ class TestMetricsEndpoints:
         assert "revenue_by_day" in data
         assert "generated_at" in data
     
-    def test_metrics_with_different_periods(self):
+    def test_metrics_with_different_periods(self, client):
         """Metrics should accept different time periods"""
         periods = ["7d", "30d", "90d", "365d"]
         
@@ -109,12 +122,12 @@ class TestMetricsEndpoints:
             data = response.json()
             assert data["period"] == period
     
-    def test_user_metrics_requires_auth(self):
+    def test_user_metrics_requires_auth(self, client):
         """User metrics endpoint should require authentication"""
         response = client.get("/api/analytics/metrics/users")
         assert response.status_code == 401
     
-    def test_user_metrics_with_valid_auth(self):
+    def test_user_metrics_with_valid_auth(self, client):
         """User metrics should return detailed user statistics"""
         response = client.get(
             "/api/analytics/metrics/users",
@@ -134,7 +147,7 @@ class TestMetricsEndpoints:
 class TestContractAnalysisEndpoints:
     """Test contract analysis endpoints"""
     
-    def test_analyze_contract_requires_auth(self):
+    def test_analyze_contract_requires_auth(self, client):
         """Contract analysis should require authentication"""
         request_data = {
             "contract_id": "CONTRACT-001",
@@ -146,7 +159,7 @@ class TestContractAnalysisEndpoints:
         )
         assert response.status_code == 401
     
-    def test_analyze_contract_with_valid_auth(self):
+    def test_analyze_contract_with_valid_auth(self, client):
         """Contract analysis should return detailed results"""
         request_data = {
             "contract_id": "CONTRACT-001",
@@ -170,12 +183,12 @@ class TestContractAnalysisEndpoints:
         assert "recommendations" in data
         assert "analyzed_at" in data
     
-    def test_contract_stats_requires_auth(self):
+    def test_contract_stats_requires_auth(self, client):
         """Contract stats should require authentication"""
         response = client.get("/api/analytics/contracts/stats")
         assert response.status_code == 401
     
-    def test_contract_stats_with_valid_auth(self):
+    def test_contract_stats_with_valid_auth(self, client):
         """Contract stats should return aggregate data"""
         response = client.get(
             "/api/analytics/contracts/stats?days=30",
@@ -193,7 +206,7 @@ class TestContractAnalysisEndpoints:
 class TestEventLoggingEndpoints:
     """Test event logging endpoints"""
     
-    def test_log_event_requires_auth(self):
+    def test_log_event_requires_auth(self, client):
         """Event logging should require authentication"""
         event_data = {
             "event_type": "search",
@@ -207,7 +220,7 @@ class TestEventLoggingEndpoints:
         )
         assert response.status_code == 401
     
-    def test_log_event_with_valid_auth(self):
+    def test_log_event_with_valid_auth(self, client):
         """Event logging should record events"""
         event_data = {
             "event_type": "search",
@@ -232,12 +245,12 @@ class TestEventLoggingEndpoints:
 class TestSearchAnalyticsEndpoints:
     """Test search analytics endpoints"""
     
-    def test_top_search_terms_requires_auth(self):
+    def test_top_search_terms_requires_auth(self, client):
         """Top search terms should require authentication"""
         response = client.get("/api/analytics/searches/top-terms")
         assert response.status_code == 401
     
-    def test_top_search_terms_with_valid_auth(self):
+    def test_top_search_terms_with_valid_auth(self, client):
         """Top search terms should return popular searches"""
         response = client.get(
             "/api/analytics/searches/top-terms?limit=10",
@@ -251,7 +264,7 @@ class TestSearchAnalyticsEndpoints:
         assert "generated_at" in data
         assert len(data["top_terms"]) <= 10
     
-    def test_top_search_terms_custom_limit(self):
+    def test_top_search_terms_custom_limit(self, client):
         """Top search terms should respect custom limit"""
         response = client.get(
             "/api/analytics/searches/top-terms?limit=5",
@@ -266,12 +279,12 @@ class TestSearchAnalyticsEndpoints:
 class TestAuthenticationMechanisms:
     """Test authentication and authorization"""
     
-    def test_missing_authorization_header(self):
+    def test_missing_authorization_header(self, client):
         """Endpoints should reject requests without auth header"""
         response = client.get("/api/analytics/metrics")
         assert response.status_code == 401
     
-    def test_malformed_authorization_header(self):
+    def test_malformed_authorization_header(self, client):
         """Endpoints should reject malformed auth headers"""
         # Missing "Bearer" prefix
         response = client.get(
@@ -280,7 +293,7 @@ class TestAuthenticationMechanisms:
         )
         assert response.status_code == 401
     
-    def test_wrong_token(self):
+    def test_wrong_token(self, client):
         """Endpoints should reject invalid tokens"""
         response = client.get(
             "/api/analytics/metrics",

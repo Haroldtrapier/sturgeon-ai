@@ -4,7 +4,6 @@ Real-time operational metrics and business intelligence tracking
 """
 
 from fastapi import APIRouter, HTTPException, Depends, Header
-from fastapi.responses import JSONResponse
 from datetime import datetime, timedelta
 from typing import Optional
 import structlog

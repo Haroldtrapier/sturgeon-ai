@@ -30,7 +30,9 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = False
-        extra = "ignore"  # Ignore extra environment variables
+        # Allow extra environment variables for other parts of the application
+        # (e.g., STRIPE_SECRET_KEY, FRONTEND_URL used by main.py)
+        extra = "ignore"
 
 
 # Global settings instance
