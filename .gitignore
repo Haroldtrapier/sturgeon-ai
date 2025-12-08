@@ -10,7 +10,7 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+# lib/ - Commented out because this project uses lib/ for TypeScript code
 lib64/
 parts/
 sdist/
@@ -59,9 +59,17 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Next.js
+.next/
+out/
+next-env.d.ts
+
 # Build
 dist/
 build/
+
+# Package lock files
+package-lock.json
 
 # Docker
 docker-compose.override.yml
