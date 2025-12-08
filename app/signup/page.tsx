@@ -13,25 +13,29 @@ export default function SignupPage() {
     setMessage(null);
     setError(null);
 
-    const formData = new FormData(e.currentTarget);
-    const email = String(formData.get('email') || '');
-    const password = String(formData.get('password') || '');
+    try {
+      const formData = new FormData(e.currentTarget);
+      const email = String(formData.get('email') || '');
+      const password = String(formData.get('password') || '');
 
-    const res = await fetch('/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (!res.ok) {
-      setError(data.error || 'Registration failed');
-    } else {
-      setMessage(data.message || 'Registration successful');
+      if (!res.ok) {
+        setError(data.error || 'Registration failed');
+      } else {
+        setMessage(data.message || 'Registration successful');
+      }
+    } catch (err) {
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (
@@ -51,7 +55,7 @@ export default function SignupPage() {
             name="email"
             type="email"
             required
-            className="mt-1 w-full border rounded-md px-3 py-2 text-sm"
+            className="mt-1 w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
 
@@ -61,7 +65,7 @@ export default function SignupPage() {
             name="password"
             type="password"
             required
-            className="mt-1 w-full border rounded-md px-3 py-2 text-sm"
+            className="mt-1 w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
 
