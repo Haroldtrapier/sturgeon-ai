@@ -1,67 +1,66 @@
 -- Sturgeon AI Analytics Dashboard - Database Schema
 -- Run this in your Supabase SQL Editor
 
--- Enable necessary extensions
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
 -- Analytics Events Table
 CREATE TABLE IF NOT EXISTS analytics_events (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     event_type VARCHAR(50) NOT NULL,
-    user_id VARCHAR(255),
+    user_id UUID,
     session_id VARCHAR(255),
     metadata JSONB DEFAULT '{}'::jsonb,
-    timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    timestamp TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Create indexes for performance
-CREATE INDEX idx_analytics_events_event_type ON analytics_events(event_type);
-CREATE INDEX idx_analytics_events_user_id ON analytics_events(user_id);
-CREATE INDEX idx_analytics_events_timestamp ON analytics_events(timestamp DESC);
-CREATE INDEX idx_analytics_events_metadata ON analytics_events USING GIN(metadata);
+CREATE INDEX IF NOT EXISTS idx_analytics_events_event_type ON analytics_events(event_type);
+CREATE INDEX IF NOT EXISTS idx_analytics_events_user_id ON analytics_events(user_id);
+CREATE INDEX IF NOT EXISTS idx_analytics_events_timestamp ON analytics_events(timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_analytics_events_metadata ON analytics_events USING GIN(metadata);
 
--- Users Table
-CREATE TABLE IF NOT EXISTS users (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+-- Users Table (Analytics extension - add columns to existing users table if needed)
+-- Note: This creates a separate analytics users table. 
+-- In production, you may want to extend the existing users table instead.
+CREATE TABLE IF NOT EXISTS analytics_users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email VARCHAR(255) UNIQUE NOT NULL,
     full_name VARCHAR(255),
     company VARCHAR(255),
     role VARCHAR(100),
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     last_login TIMESTAMPTZ,
     is_active BOOLEAN DEFAULT true
 );
 
 -- Create indexes
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_users_created_at ON users(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_analytics_users_email ON analytics_users(email);
+CREATE INDEX IF NOT EXISTS idx_analytics_users_created_at ON analytics_users(created_at DESC);
 
 -- Contract Analyses Table
 CREATE TABLE IF NOT EXISTS contract_analyses (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     contract_id VARCHAR(255) NOT NULL,
-    user_id VARCHAR(255) NOT NULL,
+    user_id UUID NOT NULL,
     contract_type VARCHAR(100),
     results JSONB NOT NULL,
     status VARCHAR(50) DEFAULT 'completed',
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Create indexes
-CREATE INDEX idx_contract_analyses_contract_id ON contract_analyses(contract_id);
-CREATE INDEX idx_contract_analyses_user_id ON contract_analyses(user_id);
-CREATE INDEX idx_contract_analyses_created_at ON contract_analyses(created_at DESC);
-CREATE INDEX idx_contract_analyses_results ON contract_analyses USING GIN(results);
+CREATE INDEX IF NOT EXISTS idx_contract_analyses_contract_id ON contract_analyses(contract_id);
+CREATE INDEX IF NOT EXISTS idx_contract_analyses_user_id ON contract_analyses(user_id);
+CREATE INDEX IF NOT EXISTS idx_contract_analyses_created_at ON contract_analyses(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_contract_analyses_results ON contract_analyses USING GIN(results);
 
 -- User Sessions Table
 CREATE TABLE IF NOT EXISTS user_sessions (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     session_id VARCHAR(255) UNIQUE NOT NULL,
-    user_id VARCHAR(255),
-    started_at TIMESTAMPTZ DEFAULT NOW(),
+    user_id UUID,
+    started_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     ended_at TIMESTAMPTZ,
     duration_seconds INTEGER,
     page_views INTEGER DEFAULT 0,
@@ -70,40 +69,40 @@ CREATE TABLE IF NOT EXISTS user_sessions (
 );
 
 -- Create indexes
-CREATE INDEX idx_user_sessions_user_id ON user_sessions(user_id);
-CREATE INDEX idx_user_sessions_started_at ON user_sessions(started_at DESC);
+CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id ON user_sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_sessions_started_at ON user_sessions(started_at DESC);
 
 -- Revenue Tracking Table
 CREATE TABLE IF NOT EXISTS revenue_events (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id VARCHAR(255) NOT NULL,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL,
     transaction_id VARCHAR(255) UNIQUE NOT NULL,
     amount DECIMAL(10, 2) NOT NULL,
     currency VARCHAR(3) DEFAULT 'USD',
     product_type VARCHAR(100),
     subscription_tier VARCHAR(50),
     metadata JSONB DEFAULT '{}'::jsonb,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Create indexes
-CREATE INDEX idx_revenue_events_user_id ON revenue_events(user_id);
-CREATE INDEX idx_revenue_events_created_at ON revenue_events(created_at DESC);
-CREATE INDEX idx_revenue_events_amount ON revenue_events(amount);
+CREATE INDEX IF NOT EXISTS idx_revenue_events_user_id ON revenue_events(user_id);
+CREATE INDEX IF NOT EXISTS idx_revenue_events_created_at ON revenue_events(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_revenue_events_amount ON revenue_events(amount);
 
 -- System Metrics Table (for monitoring)
 CREATE TABLE IF NOT EXISTS system_metrics (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     metric_type VARCHAR(50) NOT NULL,
     metric_value DECIMAL(12, 4) NOT NULL,
     unit VARCHAR(20),
     metadata JSONB DEFAULT '{}'::jsonb,
-    recorded_at TIMESTAMPTZ DEFAULT NOW()
+    recorded_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Create indexes
-CREATE INDEX idx_system_metrics_type ON system_metrics(metric_type);
-CREATE INDEX idx_system_metrics_recorded_at ON system_metrics(recorded_at DESC);
+CREATE INDEX IF NOT EXISTS idx_system_metrics_type ON system_metrics(metric_type);
+CREATE INDEX IF NOT EXISTS idx_system_metrics_recorded_at ON system_metrics(recorded_at DESC);
 
 -- Create view for daily active users
 CREATE OR REPLACE VIEW daily_active_users AS
@@ -134,14 +133,14 @@ SELECT
     DATE(created_at) as date,
     COUNT(*) as total_analyses,
     user_id,
-    JSONB_AGG(results->'analysis_score') as scores
+    JSONB_AGG(results->'analysis_score') FILTER (WHERE results->'analysis_score' IS NOT NULL) as scores
 FROM contract_analyses
 GROUP BY DATE(created_at), user_id
 ORDER BY date DESC;
 
 -- Enable Row Level Security (RLS)
 ALTER TABLE analytics_events ENABLE ROW LEVEL SECURITY;
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE analytics_users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE contract_analyses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE revenue_events ENABLE ROW LEVEL SECURITY;
@@ -154,8 +153,8 @@ TO service_role
 USING (true) 
 WITH CHECK (true);
 
-CREATE POLICY "Service role has full access to users" 
-ON users FOR ALL 
+CREATE POLICY "Service role has full access to analytics_users" 
+ON analytics_users FOR ALL 
 TO service_role 
 USING (true) 
 WITH CHECK (true);
@@ -185,22 +184,23 @@ USING (true)
 WITH CHECK (true);
 
 -- Insert sample data for testing
-INSERT INTO users (email, full_name, company, role) VALUES
+INSERT INTO analytics_users (email, full_name, company, role) VALUES
 ('admin@trapier.com', 'Harold Trapier', 'Trapier Management LLC', 'Admin'),
 ('demo@government.gov', 'Demo User', 'Department of Defense', 'Analyst')
 ON CONFLICT (email) DO NOTHING;
 
--- Create function to update updated_at timestamp
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-END;
-$$ language 'plpgsql';
+-- Note: The update_updated_at_column() function is already defined in create_opportunities_table.sql
+-- If running this migration standalone, uncomment the following:
+-- CREATE OR REPLACE FUNCTION update_updated_at_column()
+-- RETURNS TRIGGER AS $$
+-- BEGIN
+--     NEW.updated_at = CURRENT_TIMESTAMP;
+--     RETURN NEW;
+-- END;
+-- $$ language 'plpgsql';
 
--- Create triggers for updated_at
-CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
+-- Create triggers for updated_at (reuses existing function)
+CREATE TRIGGER update_analytics_users_updated_at BEFORE UPDATE ON analytics_users
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_contract_analyses_updated_at BEFORE UPDATE ON contract_analyses

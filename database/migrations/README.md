@@ -17,7 +17,7 @@ The `create_analytics_dashboard.sql` migration provides a complete analytics inf
 
 ### Tables
 1. **analytics_events** - Track user events and interactions
-2. **users** - Enhanced user information with activity tracking
+2. **analytics_users** - Enhanced user information with activity tracking (separate from core users table)
 3. **contract_analyses** - Store contract analysis results
 4. **user_sessions** - Track user session data
 5. **revenue_events** - Financial transaction tracking
@@ -77,7 +77,14 @@ All tables include optimized indexes for:
 
 ### Updating Timestamps
 Automatic timestamp updates are handled by triggers on:
-- `users.updated_at`
+- `analytics_users.updated_at`
 - `contract_analyses.updated_at`
 
-These use the `update_updated_at_column()` function.
+These use the `update_updated_at_column()` function (defined in create_opportunities_table.sql).
+
+### Important Notes
+- The `analytics_users` table is separate from the core `users` table to avoid conflicts
+- All UUID fields use `gen_random_uuid()` for consistency with the rest of the schema
+- All timestamps use `CURRENT_TIMESTAMP` for consistency
+- All indexes use `IF NOT EXISTS` to allow safe re-running of migrations
+- User ID fields use UUID type to match the core schema and enable proper foreign key relationships
