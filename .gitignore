@@ -63,5 +63,13 @@ yarn-error.log*
 dist/
 build/
 
+# Next.js
+.next/
+out/
+next-env.d.ts
+
 # Docker
 docker-compose.override.yml
+
+# Package Lock
+package-lock.json
