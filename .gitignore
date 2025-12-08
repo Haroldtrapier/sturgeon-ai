@@ -59,9 +59,15 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Next.js
+.next/
+next-env.d.ts
+*.tsbuildinfo
+
 # Build
 dist/
 build/
+package-lock.json
 
 # Docker
 docker-compose.override.yml
