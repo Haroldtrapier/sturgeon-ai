@@ -4,7 +4,7 @@ Generates LinkedIn outreach campaigns with personalized messaging sequences
 """
 
 from typing import Dict, List, Optional
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 
 # Persona definitions with LinkedIn targeting criteria
@@ -318,6 +318,5 @@ def _calculate_campaign_metrics(target_count: int) -> Dict:
 
 def _calculate_completion_date(duration_days: int) -> str:
     """Calculate the estimated campaign completion date."""
-    from datetime import timedelta
     completion_date = datetime.now(timezone.utc) + timedelta(days=duration_days)
     return completion_date.strftime("%Y-%m-%d")
