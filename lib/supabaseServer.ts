@@ -13,10 +13,20 @@ export const createServerSupabaseClient = () => {
           return cookieStore.get(name)?.value;
         },
         set(name: string, value: string, options: CookieOptions) {
-          cookieStore.set({ name, value, ...options });
+          try {
+            cookieStore.set({ name, value, ...options });
+          } catch (error) {
+            // Cookie setting can fail in certain contexts (e.g., after response headers are sent)
+            // This is expected behavior in some server-side scenarios
+          }
         },
         remove(name: string, options: CookieOptions) {
-          cookieStore.set({ name, value: '', ...options });
+          try {
+            cookieStore.set({ name, value: '', ...options, maxAge: 0 });
+          } catch (error) {
+            // Cookie removal can fail in certain contexts
+            // This is expected behavior in some server-side scenarios
+          }
         },
       },
     }
