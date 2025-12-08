@@ -1,46 +1,69 @@
 "use client";
-import { useState } from 'react';
-import { supabase } from '../../utils/supabaseClient';
+
+import { useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function ForgotPasswordPage() {
-  const [email, setEmail] = useState('');
-  const [message, setMessage] = useState('');
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setMessage('');
+  async function handleReset() {
+    setError("");
+    setMessage("");
 
-    const origin =
-      typeof window !== 'undefined'
-        ? window.location.origin
-        : 'https://sturgeon-ai.vercel.app';
+    // Validate email
+    if (!email) {
+      setError("Please enter your email address");
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError("Please enter a valid email address");
+      return;
+    }
+
+    setLoading(true);
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${origin}/reset-password`,
+      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/reset-password`
     });
 
-    if (error) setMessage(`Failed to send reset email: ${error.message}`);
-    else setMessage('Check your email for a reset link.');
     setLoading(false);
+
+    if (error) {
+      setError(error.message);
+      return;
+    }
+
+    setMessage("Password reset link has been sent to your email.");
   }
 
   return (
-    <form onSubmit={handleSubmit} style={{ maxWidth: 400, margin: '2rem auto' }}>
-      <h1>Forgot Password</h1>
-      <input
+    <div className="auth-container">
+      <h2>Reset Your Password</h2>
+
+      <input 
         type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        placeholder="you@example.com"
+        id="email"
+        placeholder="Email" 
+        value={email} 
+        onChange={e => setEmail(e.target.value)}
+        aria-label="Email address"
         required
-        style={{ width: '100%', padding: 8, marginBottom: 16 }}
       />
-      <button type="submit" disabled={loading}>
-        {loading ? 'Sending...' : 'Send Reset Link'}
+
+      {error && <p className="error">{error}</p>}
+      {message && <p className="success">{message}</p>}
+
+      <button 
+        type="button"
+        onClick={handleReset}
+        disabled={loading}
+      >
+        {loading ? "Sending..." : "Send Reset Link"}
       </button>
-      {message && <p>{message}</p>}
-    </form>
+    </div>
   );
 }
