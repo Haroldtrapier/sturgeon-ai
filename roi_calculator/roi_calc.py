@@ -36,10 +36,8 @@ def calculate_campaign_roi(channel: str, budget: float) -> Dict[str, Any]:
     conversion_rate = metrics["conversion_rate"]
     customer_value = metrics["average_customer_value"]
     
-    # Calculate expected customers
-    # For linkedin_ads: customers = budget / cost_per_customer
-    # Where cost_per_customer is derived from budget / (budget * conversion_rate)
-    # Simplified: customers = budget * conversion_rate
+    # Calculate expected customers based on conversion rate
+    # customers = budget * conversion_rate
     expected_customers = int(budget * conversion_rate)
     
     # Calculate expected revenue
