@@ -1,70 +1,94 @@
 'use client';
 
-import { useState } from 'react';
+import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { APIClient } from '@/lib/api';
+import { supabase } from '@/lib/supabaseClient';
 
 export default function SignupPage() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    setError(null);
+    setSuccess(null);
     setLoading(true);
-    setError('');
 
     try {
-      await APIClient.register(email, password);
-      router.push('/login');
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/login`,
+        },
+      });
+
+      if (error) {
+        setError(error.message);
+      } else {
+        setSuccess('Check your email to confirm your account, then you can log in.');
+      }
     } catch (err: any) {
-      setError(err.message || 'Registration failed');
+      setError(err?.message ?? 'Unexpected error');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow">
-        <h2 className="text-3xl font-bold text-center mb-6">Create Account</h2>
-        <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="min-h-screen flex items-center justify-center bg-slate-950">
+      <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-8">
+        <h1 className="text-2xl font-semibold mb-6 text-center">Create Account</h1>
+
+        {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
+        {success && <p className="mb-4 text-sm text-green-600">{success}</p>}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-2">Email</label>
+            <label className="block text-sm font-medium mb-1">Email</label>
             <input
               type="email"
-              required
+              className="w-full border rounded-lg px-3 py-2 text-sm"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
             />
           </div>
+
           <div>
-            <label className="block text-sm font-medium mb-2">Password</label>
+            <label className="block text-sm font-medium mb-1">Password</label>
             <input
               type="password"
-              required
+              className="w-full border rounded-lg px-3 py-2 text-sm"
               value={password}
+              minLength={6}
               onChange={(e) => setPassword(e.target.value)}
-              className="w2full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
             />
           </div>
-          {error && <p className="text-red-500 text-sm">{error}</p>}
+
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400"
+            className="w-full bg-blue-600 text-white rounded-lg py-2 text-sm font-medium disabled:opacity-60"
           >
-            {loading ? 'Creating Account...' : 'Sign Up'}
+            {loading ? 'Signing up…' : 'Sign Up'}
           </button>
         </form>
-        <p className="text-sm text-center mt-4">
-          Already have an account? {' '}
-          <a href="/login" className="text-blue-600 hover:underline">
+
+        <p className="mt-4 text-sm text-center text-slate-600">
+          Already have an account?{' '}
+          <button
+            type="button"
+            onClick={() => router.push('/login')}
+            className="text-blue-600 hover:underline"
+          >
             Log in
-          </a>
+          </button>
         </p>
       </div>
     </div>
