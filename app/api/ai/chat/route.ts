@@ -11,15 +11,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Initialize OpenAI (you'll need to add openai package)
+    // Get API keys
+    const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
     const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-
-    if (!OPENAI_API_KEY) {
-      return NextResponse.json(
-        { error: 'OpenAI API key not configured' },
-        { status: 500 }
-      );
-    }
 
     // Agent system prompts
     const agentPrompts = {
@@ -36,37 +30,107 @@ export async function POST(request: NextRequest) {
 
     const systemPrompt = agentPrompts[agent as keyof typeof agentPrompts] || agentPrompts.general;
 
-    // Call OpenAI API
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: 'gpt-4',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: message }
-        ],
-        temperature: 0.7,
-        max_tokens: 2000
-      })
-    });
+    let aiMessage = '';
+    let provider = '';
 
-    const data = await response.json();
+    // Try Claude first (Primary)
+    if (ANTHROPIC_API_KEY) {
+      try {
+        console.log('Attempting Claude API...');
+        const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': ANTHROPIC_API_KEY,
+            'anthropic-version': '2023-06-01'
+          },
+          body: JSON.stringify({
+            model: 'claude-3-5-sonnet-20241022',
+            max_tokens: 4096,
+            system: systemPrompt,
+            messages: [
+              { role: 'user', content: message }
+            ]
+          })
+        });
 
-    if (!response.ok) {
-      return NextResponse.json(
-        { error: data.error?.message || 'OpenAI API error' },
-        { status: response.status }
-      );
+        if (claudeResponse.ok) {
+          const claudeData = await claudeResponse.json();
+          aiMessage = claudeData.content[0]?.text || 'No response generated';
+          provider = 'Claude (Anthropic)';
+          console.log('Claude succeeded');
+        } else {
+          throw new Error(`Claude API error: ${claudeResponse.status}`);
+        }
+      } catch (claudeError: any) {
+        console.log('Claude failed, falling back to OpenAI:', claudeError.message);
+
+        // Fallback to OpenAI (Secondary)
+        if (OPENAI_API_KEY) {
+          const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${OPENAI_API_KEY}`
+            },
+            body: JSON.stringify({
+              model: 'gpt-4o',
+              messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: message }
+              ],
+              temperature: 0.7,
+              max_tokens: 2000
+            })
+          });
+
+          const openaiData = await openaiResponse.json();
+
+          if (!openaiResponse.ok) {
+            throw new Error(openaiData.error?.message || 'OpenAI API error');
+          }
+
+          aiMessage = openaiData.choices[0]?.message?.content || 'No response generated';
+          provider = 'ChatGPT (OpenAI Fallback)';
+        } else {
+          throw new Error('Both Claude and OpenAI API keys are missing');
+        }
+      }
+    } else if (OPENAI_API_KEY) {
+      // No Claude key, use OpenAI directly
+      console.log('Claude key not found, using OpenAI...');
+      const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENAI_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: message }
+          ],
+          temperature: 0.7,
+          max_tokens: 2000
+        })
+      });
+
+      const openaiData = await openaiResponse.json();
+
+      if (!openaiResponse.ok) {
+        throw new Error(openaiData.error?.message || 'OpenAI API error');
+      }
+
+      aiMessage = openaiData.choices[0]?.message?.content || 'No response generated';
+      provider = 'ChatGPT (OpenAI)';
+    } else {
+      throw new Error('No AI API keys configured. Please add ANTHROPIC_API_KEY or OPENAI_API_KEY to your environment variables.');
     }
-
-    const aiMessage = data.choices[0]?.message?.content || 'No response generated';
 
     return NextResponse.json({
       message: aiMessage,
+      provider,
       agent,
       threadId: threadId || `thread-${Date.now()}`,
       timestamp: new Date().toISOString()
