@@ -58,10 +58,13 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+package-lock.json
 
 # Build
 dist/
 build/
+.next/
+next-env.d.ts
 
 # Docker
 docker-compose.override.yml
