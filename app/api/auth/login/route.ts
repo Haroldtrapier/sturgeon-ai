@@ -1,6 +1,5 @@
+import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,8 +12,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      }
+    );
 
+    // Authenticate user
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -22,25 +31,29 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       return NextResponse.json(
-        { error: 'Invalid login credentials' },
+        { error: error.message },
         { status: 401 }
       );
     }
 
     if (!data.session) {
       return NextResponse.json(
-        { error: 'Login failed' },
-        { status: 400 }
+        { error: 'No session created' },
+        { status: 401 }
       );
     }
 
-    return NextResponse.json({
-      message: 'Login successful',
-      user: data.user,
-    });
-  } catch (err: any) {
     return NextResponse.json(
-      { error: err.message || 'Login failed' },
+      { 
+        message: 'Login successful',
+        session: data.session,
+        user: data.user
+      },
+      { status: 200 }
+    );
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error.message },
       { status: 500 }
     );
   }
