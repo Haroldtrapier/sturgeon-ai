@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -10,6 +11,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
+  const [opportunities, setOpportunities] = useState<any[]>([]);
+  const [loadingData, setLoadingData] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('supabase-token');
@@ -24,7 +27,26 @@ export default function DashboardPage() {
       role: 'Administrator'
     });
     setLoading(false);
+
+    // Fetch real opportunities from SAM.gov
+    fetchOpportunities();
   }, [router]);
+
+  const fetchOpportunities = async () => {
+    setLoadingData(true);
+    try {
+      const response = await fetch('/api/marketplaces/sam?q=technology');
+      const data = await response.json();
+
+      if (data.success && data.results) {
+        setOpportunities(data.results.slice(0, 5));
+      }
+    } catch (error) {
+      console.error('Error fetching opportunities:', error);
+    } finally {
+      setLoadingData(false);
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('supabase-token');
@@ -40,23 +62,10 @@ export default function DashboardPage() {
   }
 
   const stats = [
-    { label: 'Active Contracts', value: '24', change: '+12%', positive: true },
-    { label: 'Total Revenue', value: '$2.4M', change: '+8%', positive: true },
-    { label: 'Opportunities', value: '156', change: '+23%', positive: true },
-    { label: 'Win Rate', value: '68%', change: '-3%', positive: false },
-  ];
-
-  const contracts = [
-    { id: 'C-001', agency: 'Department of Defense', value: '$450K', status: 'Active', date: '2024-01-15' },
-    { id: 'C-002', agency: 'NASA', value: '$850K', status: 'Active', date: '2024-02-20' },
-    { id: 'C-003', agency: 'DHS', value: '$320K', status: 'Pending', date: '2024-03-10' },
-    { id: 'C-004', agency: 'VA', value: '$180K', status: 'Active', date: '2024-03-25' },
-  ];
-
-  const opportunities = [
-    { id: 'O-101', title: 'Cybersecurity Infrastructure', agency: 'DoD', value: '$1.2M', deadline: '2024-12-15' },
-    { id: 'O-102', title: 'Cloud Migration Services', agency: 'GSA', value: '$900K', deadline: '2024-12-20' },
-    { id: 'O-103', title: 'AI/ML Development', agency: 'NASA', value: '$2.5M', deadline: '2025-01-10' },
+    { label: 'Active Opportunities', value: opportunities.length.toString(), change: 'Live Data', positive: true },
+    { label: 'SAM.gov Integration', value: 'Active', change: 'Real-time', positive: true },
+    { label: 'AI Agents', value: '5', change: 'Working', positive: true },
+    { label: 'Data Source', value: 'SAM.gov', change: 'Live', positive: true },
   ];
 
   return (
@@ -88,36 +97,12 @@ export default function DashboardPage() {
           </Link>
 
           <button
-            onClick={() => setActiveTab('contracts')}
-            className={`w-full text-left px-4 py-3 rounded-lg transition ${
-              activeTab === 'contracts' ? 'bg-blue-600' : 'hover:bg-slate-800'
-            }`}
-          >
-            📝 Contracts
-          </button>
-          <button
             onClick={() => setActiveTab('opportunities')}
             className={`w-full text-left px-4 py-3 rounded-lg transition ${
               activeTab === 'opportunities' ? 'bg-blue-600' : 'hover:bg-slate-800'
             }`}
           >
             🎯 Opportunities
-          </button>
-          <button
-            onClick={() => setActiveTab('analytics')}
-            className={`w-full text-left px-4 py-3 rounded-lg transition ${
-              activeTab === 'analytics' ? 'bg-blue-600' : 'hover:bg-slate-800'
-            }`}
-          >
-            📈 Analytics
-          </button>
-          <button
-            onClick={() => setActiveTab('settings')}
-            className={`w-full text-left px-4 py-3 rounded-lg transition ${
-              activeTab === 'settings' ? 'bg-blue-600' : 'hover:bg-slate-800'
-            }`}
-          >
-            ⚙️ Settings
           </button>
         </nav>
 
@@ -156,10 +141,6 @@ export default function DashboardPage() {
                 <span className="absolute left-3 top-2.5 text-slate-400">🔍</span>
               </div>
             </div>
-            <div className="flex items-center gap-4 ml-6">
-              <button className="p-2 hover:bg-slate-100 rounded-lg">🔔</button>
-              <button className="p-2 hover:bg-slate-100 rounded-lg">💬</button>
-            </div>
           </div>
         </div>
 
@@ -168,180 +149,114 @@ export default function DashboardPage() {
             <div className="space-y-8">
               <div>
                 <h2 className="text-3xl font-bold text-slate-900 mb-2">Dashboard Overview</h2>
-                <p className="text-slate-600">Welcome back! Here's what's happening with your contracts.</p>
+                <p className="text-slate-600">Live data from SAM.gov</p>
               </div>
 
-              {/* AI Chat CTA */}
-              <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg shadow-lg p-8 text-white">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-2xl font-bold mb-2">🤖 Try Our AI Agents</h3>
-                    <p className="text-white/90 mb-4">
-                      Get instant help with contract analysis, proposal writing, compliance checking, and more!
-                    </p>
-                    <Link
-                      href="/ai-chat"
-                      className="inline-block px-6 py-3 bg-white text-purple-600 font-bold rounded-lg hover:bg-slate-100 transition"
-                    >
-                      Start Chatting →
-                    </Link>
-                  </div>
-                  <div className="text-6xl">💬</div>
-                </div>
-              </div>
-
+              {/* Stats Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {stats.map((stat, i) => (
                   <div key={i} className="bg-white rounded-lg shadow p-6 border border-slate-200">
                     <p className="text-slate-600 text-sm font-medium">{stat.label}</p>
                     <p className="text-3xl font-bold text-slate-900 mt-2">{stat.value}</p>
                     <p className={`text-sm mt-2 ${stat.positive ? 'text-green-600' : 'text-red-600'}`}>
-                      {stat.change} from last month
+                      {stat.change}
                     </p>
                   </div>
                 ))}
               </div>
 
+              {/* Live Opportunities from SAM.gov */}
               <div className="bg-white rounded-lg shadow border border-slate-200">
-                <div className="px-6 py-4 border-b border-slate-200">
-                  <h3 className="text-xl font-bold text-slate-900">Recent Contracts</h3>
+                <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+                  <h3 className="text-xl font-bold text-slate-900">Live SAM.gov Opportunities</h3>
+                  {loadingData && <span className="text-sm text-slate-600">Loading...</span>}
                 </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-slate-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">ID</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Agency</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Value</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Status</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Date</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200">
-                      {contracts.map((contract) => (
-                        <tr key={contract.id} className="hover:bg-slate-50">
-                          <td className="px-6 py-4 text-sm font-medium text-slate-900">{contract.id}</td>
-                          <td className="px-6 py-4 text-sm text-slate-600">{contract.agency}</td>
-                          <td className="px-6 py-4 text-sm text-slate-900 font-semibold">{contract.value}</td>
-                          <td className="px-6 py-4">
-                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                              contract.status === 'Active' 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-yellow-100 text-yellow-800'
-                            }`}>
-                              {contract.status}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-sm text-slate-600">{contract.date}</td>
-                        </tr>
+                <div className="p-6">
+                  {opportunities.length > 0 ? (
+                    <div className="space-y-4">
+                      {opportunities.map((opp, i) => (
+                        <div key={i} className="border border-slate-200 rounded-lg p-4 hover:border-blue-300 transition">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h4 className="font-semibold text-slate-900">{opp.title}</h4>
+                              <p className="text-slate-600 text-sm mt-1">{opp.agency}</p>
+                              <div className="flex gap-2 mt-2 text-xs">
+                                <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">{opp.source}</span>
+                                {opp.status && (
+                                  <span className="bg-green-100 text-green-800 px-2 py-1 rounded">{opp.status}</span>
+                                )}
+                              </div>
+                            </div>
+                            {opp.link && (
+                              <a 
+                                href={opp.link} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm"
+                              >
+                                View
+                              </a>
+                            )}
+                          </div>
+                        </div>
                       ))}
-                    </tbody>
-                  </table>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-slate-600 mb-4">
+                        {loadingData ? 'Fetching live opportunities from SAM.gov...' : 'No opportunities loaded yet'}
+                      </p>
+                      <button 
+                        onClick={fetchOpportunities}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+                      >
+                        Reload Data
+                      </button>
+                    </div>
+                  )}
                 </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'contracts' && (
-            <div className="space-y-6">
-              <h2 className="text-3xl font-bold text-slate-900">All Contracts</h2>
-              <div className="bg-white rounded-lg shadow border border-slate-200 overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-slate-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">ID</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Agency</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Value</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Status</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Date</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200">
-                    {contracts.map((contract) => (
-                      <tr key={contract.id} className="hover:bg-slate-50">
-                        <td className="px-6 py-4 text-sm font-medium text-slate-900">{contract.id}</td>
-                        <td className="px-6 py-4 text-sm text-slate-600">{contract.agency}</td>
-                        <td className="px-6 py-4 text-sm text-slate-900 font-semibold">{contract.value}</td>
-                        <td className="px-6 py-4">
-                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                            contract.status === 'Active' 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {contract.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-slate-600">{contract.date}</td>
-                        <td className="px-6 py-4 text-sm">
-                          <button className="text-blue-600 hover:text-blue-800 font-medium">View</button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
               </div>
             </div>
           )}
 
           {activeTab === 'opportunities' && (
             <div className="space-y-6">
-              <h2 className="text-3xl font-bold text-slate-900">Open Opportunities</h2>
-              <div className="grid gap-4">
-                {opportunities.map((opp) => (
-                  <div key={opp.id} className="bg-white rounded-lg shadow p-6 border border-slate-200 hover:border-blue-300 transition">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <h3 className="text-xl font-bold text-slate-900 mb-2">{opp.title}</h3>
-                        <p className="text-slate-600 mb-3">{opp.agency} • {opp.id}</p>
-                        <div className="flex gap-4 text-sm">
-                          <span className="font-semibold text-green-600">{opp.value}</span>
-                          <span className="text-slate-500">Deadline: {opp.deadline}</span>
-                        </div>
+              <h2 className="text-3xl font-bold text-slate-900">Search Opportunities</h2>
+              <div className="bg-white rounded-lg shadow p-6 border border-slate-200">
+                <input
+                  type="text"
+                  placeholder="Search SAM.gov (e.g., 'cybersecurity', 'IT services')..."
+                  className="w-full px-4 py-3 border border-slate-300 rounded-lg mb-4"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      const query = (e.target as HTMLInputElement).value;
+                      if (query) {
+                        setLoadingData(true);
+                        fetch(`/api/marketplaces/sam?q=${encodeURIComponent(query)}`)
+                          .then(r => r.json())
+                          .then(data => {
+                            if (data.success) setOpportunities(data.results || []);
+                          })
+                          .finally(() => setLoadingData(false));
+                      }
+                    }
+                  }}
+                />
+                {opportunities.length > 0 && (
+                  <div className="space-y-4 mt-6">
+                    {opportunities.map((opp, i) => (
+                      <div key={i} className="border border-slate-200 rounded-lg p-4">
+                        <h4 className="font-semibold">{opp.title}</h4>
+                        <p className="text-sm text-slate-600 mt-1">{opp.agency} • {opp.id}</p>
+                        {opp.link && (
+                          <a href={opp.link} target="_blank" rel="noopener noreferrer" className="text-blue-600 text-sm mt-2 inline-block">
+                            View on SAM.gov →
+                          </a>
+                        )}
                       </div>
-                      <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold">
-                        Apply
-                      </button>
-                    </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'analytics' && (
-            <div className="space-y-6">
-              <h2 className="text-3xl font-bold text-slate-900">Analytics</h2>
-              <div className="bg-white rounded-lg shadow p-8 border border-slate-200">
-                <p className="text-slate-600">📊 Advanced analytics and reporting coming soon...</p>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'settings' && (
-            <div className="space-y-6">
-              <h2 className="text-3xl font-bold text-slate-900">Settings</h2>
-              <div className="bg-white rounded-lg shadow p-6 border border-slate-200 space-y-4">
-                <div>
-                  <h3 className="text-lg font-semibold text-slate-900 mb-3">Profile Information</h3>
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
-                      <input type="text" value={user?.name} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
-                      <input type="email" value={user?.email} className="w-full px-3 py-2 border border-slate-300 rounded-lg" disabled />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Role</label>
-                      <input type="text" value={user?.role} className="w-full px-3 py-2 border border-slate-300 rounded-lg" disabled />
-                    </div>
-                  </div>
-                </div>
-                <button className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold">
-                  Save Changes
-                </button>
+                )}
               </div>
             </div>
           )}
