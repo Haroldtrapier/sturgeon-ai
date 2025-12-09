@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabase.auth.admin.createUser({
       email,
       password,
-      email_confirm: false,
+      email_confirm: true,  // ← AUTO-CONFIRM EMAIL
     });
 
     if (error) {
