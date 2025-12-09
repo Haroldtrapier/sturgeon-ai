@@ -17,6 +17,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
+      console.log('Attempting login with:', email);
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -24,6 +25,7 @@ export default function LoginPage() {
       });
 
       const data = await response.json();
+      console.log('Login response:', data);
 
       if (!response.ok) {
         setError(data.error || 'Login failed');
@@ -34,11 +36,13 @@ export default function LoginPage() {
       // Store session token in localStorage
       if (data.session?.access_token) {
         localStorage.setItem('supabase-token', data.session.access_token);
+        console.log('Token stored, redirecting to dashboard...');
       }
 
       // Redirect to dashboard
       router.push('/dashboard');
     } catch (err: any) {
+      console.error('Login error:', err);
       setError(err.message || 'An error occurred');
       setLoading(false);
     }
