@@ -35,7 +35,9 @@
     "recharts": "^2.10.3",
     "zod": "^3.22.4",
     "react-hook-form": "^7.48.2",
-    "@hookform/resolvers": "^3.3.2"
+    "@hookform/resolvers": "^3.3.2",
+    "stripe": "^14.8.0",
+    "@anthropic-ai/sdk": "^0.9.1"
   },
   "devDependencies": {
     "@types/node": "^20",
