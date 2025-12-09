@@ -1,0 +1,14 @@
+{
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "setup": "chmod +x scripts/setup.sh && ./scripts/setup.sh",
+    "db:migrate": "echo 'Copy database/schema.sql to Supabase SQL Editor and run it'",
+    "worker:documents": "ts-node workers/documentParser.ts",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "type-check": "tsc --noEmit"
+  }
+}
