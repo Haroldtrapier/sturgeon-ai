@@ -1,42 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { searchSamGov, formatSamOpportunity } from '@/lib/integrations/samgov';
 
-// Mock data generator for different marketplaces
-function generateMockResults(marketplace: string, query: string) {
-  const agencies = [
-    'Department of Defense',
-    'Department of Homeland Security',
-    'Department of Veterans Affairs',
-    'General Services Administration',
-    'Department of Energy',
-    'NASA',
-  ];
-
-  const statuses = ['Active', 'Pre-Solicitation', 'Award Pending', 'Archived'];
-
-  return Array.from({ length: 5 }, (_, i) => ({
-    id: `${marketplace}-${Date.now()}-${i}`,
-    title: `${query} - ${marketplace.toUpperCase()} Opportunity ${i + 1}`,
-    agency: agencies[Math.floor(Math.random() * agencies.length)],
-    status: statuses[Math.floor(Math.random() * statuses.length)],
-    source: marketplace,
-  }));
-}
-
-// TODO: Implement real API integrations
+// Real SAM.gov integration
 async function searchSAM(query: string) {
-  return generateMockResults('sam', query);
+  try {
+    // Search last 30 days of active opportunities
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const postedFrom = thirtyDaysAgo.toISOString().split('T')[0];
+
+    const response = await searchSamGov(query, 25, 0, postedFrom, 'yes');
+
+    // Format opportunities for frontend
+    const formatted = response.opportunitiesData?.map(formatSamOpportunity) || [];
+
+    return {
+      results: formatted,
+      total: response.totalRecords || 0,
+      source: 'SAM.gov'
+    };
+  } catch (error: any) {
+    console.error('SAM.gov search error:', error);
+    throw new Error(`SAM.gov API error: ${error.message}`);
+  }
 }
 
-async function searchGovWin(query: string) {
-  return generateMockResults('govwin', query);
-}
-
+// USASpending.gov integration (optional - can add later)
 async function searchGovSpend(query: string) {
-  return generateMockResults('govspend', query);
-}
-
-async function searchUnison(query: string) {
-  return generateMockResults('unison', query);
+  // TODO: Implement USASpending.gov API integration
+  return {
+    results: [],
+    total: 0,
+    source: 'USASpending.gov',
+    message: 'USASpending.gov integration coming soon'
+  };
 }
 
 export async function GET(
@@ -57,37 +54,36 @@ export async function GET(
     const { marketplace } = params;
 
     // Route to appropriate search function
-    let results;
+    let data;
     switch (marketplace.toLowerCase()) {
       case 'sam':
-        results = await searchSAM(query);
-        break;
-      case 'govwin':
-        results = await searchGovWin(query);
+      case 'samgov':
+        data = await searchSAM(query);
         break;
       case 'govspend':
-        results = await searchGovSpend(query);
-        break;
-      case 'unison':
-        results = await searchUnison(query);
+      case 'usaspending':
+        data = await searchGovSpend(query);
         break;
       default:
         return NextResponse.json(
-          { error: `Unknown marketplace: ${marketplace}` },
+          { error: `Unknown marketplace: ${marketplace}. Supported: sam, govspend` },
           { status: 400 }
         );
     }
 
     return NextResponse.json({
       success: true,
-      results,
+      ...data,
       marketplace,
       query,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Marketplace search error:', error);
     return NextResponse.json(
-      { error: 'Failed to search marketplace' },
+      { 
+        error: error.message || 'Failed to search marketplace',
+        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      },
       { status: 500 }
     );
   }
