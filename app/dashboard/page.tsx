@@ -18,7 +18,6 @@ export default function DashboardPage() {
       return;
     }
 
-    // Mock user data - replace with real Supabase fetch
     setUser({ 
       email: 'user@example.com',
       name: 'John Doe',
@@ -40,7 +39,6 @@ export default function DashboardPage() {
     );
   }
 
-  // Mock data
   const stats = [
     { label: 'Active Contracts', value: '24', change: '+12%', positive: true },
     { label: 'Total Revenue', value: '$2.4M', change: '+8%', positive: true },
@@ -79,6 +77,16 @@ export default function DashboardPage() {
           >
             📊 Overview
           </button>
+
+          {/* AI CHAT BUTTON - NEW */}
+          <Link
+            href="/ai-chat"
+            className="block w-full text-left px-4 py-3 rounded-lg transition bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+          >
+            <span className="font-semibold">🤖 AI Chat</span>
+            <span className="block text-xs text-white/80 mt-1">5 Specialized Agents</span>
+          </Link>
+
           <button
             onClick={() => setActiveTab('contracts')}
             className={`w-full text-left px-4 py-3 rounded-lg transition ${
@@ -113,7 +121,6 @@ export default function DashboardPage() {
           </button>
         </nav>
 
-        {/* User Profile in Sidebar */}
         <div className="p-4 border-t border-slate-700">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold">
@@ -135,7 +142,6 @@ export default function DashboardPage() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top Bar */}
         <div className="bg-white border-b border-slate-200 px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex-1 max-w-2xl">
@@ -157,7 +163,6 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Content Area */}
         <div className="flex-1 overflow-auto p-8">
           {activeTab === 'overview' && (
             <div className="space-y-8">
@@ -166,7 +171,25 @@ export default function DashboardPage() {
                 <p className="text-slate-600">Welcome back! Here's what's happening with your contracts.</p>
               </div>
 
-              {/* Stats Grid */}
+              {/* AI Chat CTA */}
+              <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg shadow-lg p-8 text-white">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-2xl font-bold mb-2">🤖 Try Our AI Agents</h3>
+                    <p className="text-white/90 mb-4">
+                      Get instant help with contract analysis, proposal writing, compliance checking, and more!
+                    </p>
+                    <Link
+                      href="/ai-chat"
+                      className="inline-block px-6 py-3 bg-white text-purple-600 font-bold rounded-lg hover:bg-slate-100 transition"
+                    >
+                      Start Chatting →
+                    </Link>
+                  </div>
+                  <div className="text-6xl">💬</div>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {stats.map((stat, i) => (
                   <div key={i} className="bg-white rounded-lg shadow p-6 border border-slate-200">
@@ -179,7 +202,6 @@ export default function DashboardPage() {
                 ))}
               </div>
 
-              {/* Recent Contracts */}
               <div className="bg-white rounded-lg shadow border border-slate-200">
                 <div className="px-6 py-4 border-b border-slate-200">
                   <h3 className="text-xl font-bold text-slate-900">Recent Contracts</h3>
