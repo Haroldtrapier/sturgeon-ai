@@ -1,0 +1,29 @@
+{
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "outputDirectory": ".next",
+  "env": {
+    "NEXT_PUBLIC_SUPABASE_URL": "@supabase_url",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "@supabase_anon_key",
+    "SUPABASE_SERVICE_KEY": "@supabase_service_key",
+    "OPENAI_API_KEY": "@openai_api_key",
+    "GRANTS_GOV_API_KEY": "@grants_gov_api_key"
+  },
+  "regions": ["iad1"],
+  "functions": {
+    "pages/api/**/*.ts": {
+      "maxDuration": 30,
+      "memory": 1024
+    },
+    "pages/api/ai/**/*.ts": {
+      "maxDuration": 60,
+      "memory": 2048
+    },
+    "pages/api/documents/upload.ts": {
+      "maxDuration": 300,
+      "memory": 3008
+    }
+  }
+}
