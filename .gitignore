@@ -65,3 +65,5 @@ build/
 
 # Docker
 docker-compose.override.yml
+.vercel
+!.env.example
