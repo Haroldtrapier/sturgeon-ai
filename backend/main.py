@@ -6,8 +6,9 @@ from passlib.context import CryptContext
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
 import os
-from typing import Optional
+from typing import Optional, List, Dict
 import stripe
+from roi_calculator import roi_calc
 
 # Initialize FastAPI
 app = FastAPI(title="Sturgeon AI API")
@@ -40,6 +41,20 @@ class UserLogin(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
+
+class CampaignROIRequest(BaseModel):
+    channel: str
+    budget: float
+    duration_months: int = 3
+
+class BudgetOptimizationRequest(BaseModel):
+    total_budget: float
+    channels: List[str]
+
+class GrowthProjectionRequest(BaseModel):
+    monthly_budget: float
+    duration_months: int = 12
+    channel_mix: Optional[Dict[str, float]] = None
 
 # Helper functions
 def hash_password(password: str) -> str:
@@ -108,6 +123,52 @@ async def create_checkout_session(current_user = Depends(get_current_user)):
         return {"url": session.url}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+# ROI Calculator Endpoints
+@app.post("/marketing/calculate-roi")
+async def calculate_campaign_roi(request: CampaignROIRequest):
+    """Calculate ROI for a marketing campaign"""
+    try:
+        result = roi_calc.calculate_campaign_roi(
+            channel=request.channel,
+            budget=request.budget,
+            duration_months=request.duration_months
+        )
+        if "error" in result:
+            raise HTTPException(status_code=400, detail=result["error"])
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/marketing/optimize-budget")
+async def optimize_budget(request: BudgetOptimizationRequest):
+    """Optimize budget allocation across multiple channels"""
+    try:
+        result = roi_calc.optimize_budget_allocation(
+            total_budget=request.total_budget,
+            channels=request.channels
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/marketing/project-growth")
+async def project_growth(request: GrowthProjectionRequest):
+    """Project 12-month growth trajectory"""
+    try:
+        result = roi_calc.project_growth_trajectory(
+            monthly_budget=request.monthly_budget,
+            duration_months=request.duration_months,
+            channel_mix=request.channel_mix
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/marketing/benchmarks")
+async def get_benchmarks():
+    """Get industry benchmarks for all channels"""
+    return {"benchmarks": roi_calc.benchmarks}
 
 if __name__ == "__main__":
     import uvicorn
